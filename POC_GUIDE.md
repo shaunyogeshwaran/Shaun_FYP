@@ -100,7 +100,7 @@ Claim: "Mars appears red due to iron oxide on its surface."
 5. **Decision:** 0.45 > 0.447 → **VERIFIED**
 
 **What would a fixed threshold do?**
-With a fixed 0.5 threshold: 0.45 < 0.5 → Would **incorrectly flag** this as a hallucination!
+With a fixed 0.5 threshold: 0.45 < 0.5 → Would **incorrectly flag** this as a hallucination!  Since we know this claim is factually accurate (easily verifiable), rejecting it would be a false positive.
 
 ### Scenario B: Low Confidence (Weak Evidence)
 
