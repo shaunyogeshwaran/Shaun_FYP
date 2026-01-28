@@ -155,3 +155,154 @@ This is the core innovation that makes AFLHR Lite different from existing halluc
 3. Observe the output showing both scenarios
 
 The notebook uses simulated NLI scores for demonstration. The full system would use a real NLI model (RoBERTa-MNLI) for actual verification.
+
+---
+
+## Cell-by-Cell Breakdown
+
+### Cell 0-2: Introduction & Setup Header
+Markdown cells explaining the PoC goals and the adaptive threshold concept.
+
+### Cell 3: Install Dependencies
+```python
+!pip install -r requirements.txt -q
+```
+Installs required packages (sentence-transformers, faiss-cpu, numpy).
+
+### Cell 4: Module Description
+Markdown explaining the semantic retrieval component.
+
+### Cell 5: Load Embedding Model
+```python
+embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+```
+Loads the sentence transformer model used to convert text into 384-dimensional vectors.
+
+### Cell 6: Define Knowledge Base
+Creates a list of 5 Mars facts that serve as the "trusted source of truth" for retrieval.
+
+### Cell 7: Embed Knowledge Base
+Converts all 5 facts into normalized vector embeddings for similarity search.
+
+### Cell 8: Build FAISS Index
+```python
+faiss_index = faiss.IndexFlatIP(dimension)
+```
+Creates an Inner Product index for cosine similarity search (works because vectors are normalized).
+
+### Cell 9: Define `retrieve_with_confidence()`
+The retrieval function that:
+1. Embeds the query
+2. Searches FAISS for the closest document
+3. Normalizes the similarity score from [-1, 1] to [0, 1]
+4. Returns the document, score, and index
+
+### Cell 10: Test Retriever
+Runs 4 test queries through the retriever to demonstrate varying confidence scores.
+
+### Cell 11: Adaptive Threshold Description
+Markdown explaining the formula and intuition behind dynamic thresholds.
+
+### Cell 12: Define `calculate_dynamic_threshold()`
+The core innovation function:
+```python
+dynamic_threshold = base_threshold + alpha * (pivot - retrieval_score)
+```
+Adjusts threshold up/down based on retrieval confidence.
+
+### Cell 13: Threshold Demonstration
+Shows how 5 different retrieval scores map to different thresholds.
+
+### Cell 14: Pipeline Description
+Markdown introducing the end-to-end verification demonstration.
+
+### Cell 15: Define `verify_claim()`
+Simple comparison function that checks if entailment_score > threshold.
+
+### Cell 16: Scenario A Execution
+Runs the high-confidence Mars query through the full pipeline.
+
+### Cell 17: Scenario B Execution
+Runs the low-confidence Jupiter query (off-topic) through the pipeline.
+
+### Cell 18: Summary
+Prints the PoC results and outlines next steps for the full prototype.
+
+---
+
+## Hardcoded Values Reference
+
+These values are hardcoded in the notebook for demonstration purposes. In a production system, many would be configurable or learned.
+
+### Model & Infrastructure
+
+| Element | Value | Cell | Notes |
+|---------|-------|------|-------|
+| Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` | 5 | Lightweight model (384 dims). Could swap for larger models. |
+| FAISS Index Type | `IndexFlatIP` | 8 | Brute-force inner product. Fine for small KB, would need IVF for scale. |
+
+### Adaptive Threshold Parameters
+
+| Parameter | Value | Cell | Purpose |
+|-----------|-------|------|---------|
+| `base_threshold` | `0.5` | 12 | Starting point for threshold adjustment |
+| `alpha` | `0.5` | 12 | Sensitivity — how much confidence affects threshold |
+| `pivot` | `0.7` | 12 | Breakpoint — scores above this lower the threshold |
+| Clamp Min | `0.3` | 12 | Prevents threshold from going too low |
+| Clamp Max | `0.7` | 12 | Prevents threshold from going too high |
+| Fixed Baseline | `0.5` | 16 | For comparison with dynamic approach |
+
+### Knowledge Base (5 facts)
+
+| Index | Fact | Cell |
+|-------|------|------|
+| 0 | "Mars is the fourth planet from the Sun in our solar system." | 6 |
+| 1 | "Mars is called the Red Planet because of iron oxide (rust) on its surface." | 6 |
+| 2 | "Mars has two small moons named Phobos and Deimos." | 6 |
+| 3 | "A day on Mars (called a sol) is about 24 hours and 37 minutes long." | 6 |
+| 4 | "Mars has the largest volcano in the solar system, called Olympus Mons." | 6 |
+
+### Test Queries
+
+| Query | Cell | Purpose |
+|-------|------|---------|
+| "What color is Mars?" | 10, 16 | High-confidence on-topic query |
+| "How many moons does Mars have?" | 10 | High-confidence on-topic query |
+| "Is Mars blue?" | 10 | On-topic but factually wrong |
+| "What is the weather like on Jupiter?" | 10, 17 | Off-topic query (KB has no Jupiter info) |
+
+### Threshold Demo Scores
+
+| Score | Cell | Maps to Threshold |
+|-------|------|-------------------|
+| 0.95 | 13 | 0.375 (very low — trust evidence) |
+| 0.80 | 13 | 0.45 (low — trust evidence) |
+| 0.70 | 13 | 0.50 (neutral — at pivot) |
+| 0.55 | 13 | 0.575 (higher — skeptical) |
+| 0.40 | 13 | 0.65 (high — very skeptical) |
+
+### Simulated NLI Scores
+
+| Scenario | Claim | Simulated Score | Cell | Why Simulated? |
+|----------|-------|-----------------|------|----------------|
+| A | "Mars appears red due to iron oxide on its surface." | `0.45` | 16 | Real NLI (RoBERTa-MNLI) not integrated yet |
+| B | "Jupiter has mild, pleasant weather similar to Earth." | `0.42` | 17 | Represents weak entailment for off-topic claim |
+
+### Score Normalization
+
+| Element | Value | Cell | Notes |
+|---------|-------|------|-------|
+| Raw FAISS score range | `[-1, 1]` | 9 | Cosine similarity range |
+| Normalized score formula | `(score + 1) / 2` | 9 | Converts to [0, 1] for intuitive interpretation |
+
+---
+
+## What Would Change in Production?
+
+| Current (PoC) | Production | Why |
+|---------------|------------|-----|
+| 5 hardcoded Mars facts | Wikipedia/domain corpus | Scale to real-world coverage |
+| Simulated NLI scores | RoBERTa-MNLI model | Actual semantic entailment inference |
+| Fixed α and pivot | Learned or tuned values | Optimize for specific dataset/domain |
+| `IndexFlatIP` | `IndexIVFFlat` or HNSW | Scale to millions of documents |
+| No response generation | Llama-3-8B integration | Generate verified responses |
