@@ -4,9 +4,11 @@ Handles retrieval, generation, and verification logic.
 """
 
 import os
-# Disable MPS and tokenizer parallelism to prevent segfaults
+# Disable MPS and tokenizer parallelism to prevent segfaults on Apple Silicon
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
 import numpy as np
 import faiss

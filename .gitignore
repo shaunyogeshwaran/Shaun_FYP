@@ -28,6 +28,10 @@ venv/
 ENV/
 env/
 .venv/
+aflhr_env/
+
+# Export folders
+streamlit_export*/
 
 # IDE
 .idea/
