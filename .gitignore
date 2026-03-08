@@ -48,3 +48,7 @@ streamlit_export*/
 
 # Model cache (optional - uncomment if you want to exclude)
 # .cache/
+
+# Experiment data and results
+data/
+results/
