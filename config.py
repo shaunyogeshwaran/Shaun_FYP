@@ -94,3 +94,30 @@ OFFLINE_MOCK_RESPONSE = "Based on the available information, this is a mock resp
 # System Prompts
 # =============================================================================
 GENERATION_SYSTEM_PROMPT = """You are a precise assistant. Answer the question using ONLY the context provided. Be concise."""
+
+# =============================================================================
+# Experiment Configuration
+# =============================================================================
+EXPERIMENT_SEED = 42
+DEV_SPLIT_RATIO = 0.7
+
+# HaluEval dataset (HuggingFace)
+HALUEVAL_DATASET = "pminervini/HaluEval"
+HALUEVAL_TASKS = ["qa", "summarization"]
+
+# Directories
+DATA_DIR = "data"
+RESULTS_DIR = "results"
+FIGURES_DIR = "results/figures"
+
+# =============================================================================
+# Grid Search Ranges
+# =============================================================================
+GRID_C2_T_STATIC = {"min": 0.50, "max": 0.99, "step": 0.01}
+
+GRID_C3_PIVOT = {"min": 0.60, "max": 0.90, "step": 0.05}
+GRID_C3_T_STRICT = {"min": 0.85, "max": 0.99, "step": 0.02}
+GRID_C3_T_LENIENT = {"min": 0.60, "max": 0.85, "step": 0.05}
+
+GRID_C3_CONT_T_STRICT = {"min": 0.85, "max": 0.99, "step": 0.02}
+GRID_C3_CONT_T_LENIENT = {"min": 0.50, "max": 0.85, "step": 0.05}
