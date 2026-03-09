@@ -10,6 +10,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+import math
+import time
+
 import numpy as np
 import faiss
 import torch
@@ -203,12 +206,13 @@ class AFLHREngine:
             Entailment probability (0-1)
         """
         # Tokenize with truncation to prevent overflow
-        # CRITICAL: truncation="only_first" truncates premise, keeps hypothesis intact
+        # Use "longest_first" to handle edge cases where hypothesis alone
+        # exceeds max_length (which causes "only_first" to fail).
         inputs = self.tokenizer(
             premise,
             hypothesis,
             return_tensors="pt",
-            truncation="only_first",
+            truncation="longest_first",
             max_length=512,
             padding=True
         )
@@ -328,4 +332,201 @@ class AFLHREngine:
             'generation': generated_response,
             'nli_score': nli_score,
             'verdict': verdict
+        }
+
+    # ==================================================================
+    # Experiment / Evaluation Methods
+    # ==================================================================
+
+    def compute_retrieval_score(self, query: str, knowledge: str) -> float:
+        """Compute cosine similarity between query and knowledge embeddings.
+
+        Returns a score in [0, 1] (converted from cosine range [-1, 1]).
+        """
+        query_emb = self._encode([query])
+        knowledge_emb = self._encode([knowledge])
+        raw_score = float(np.dot(query_emb[0], knowledge_emb[0]))
+        return round((raw_score + 1) / 2, 4)
+
+    def calculate_verdict_continuous(
+        self,
+        retrieval_score: float,
+        nli_score: float,
+        T_strict: float,
+        T_lenient: float,
+        method: str = "sqrt",
+        sigmoid_k: float = 10.0,
+        sigmoid_pivot: float = 0.5,
+    ) -> dict:
+        """Continuous Cw-CONLI: threshold varies smoothly with retrieval score.
+
+        Methods:
+          sqrt:    T = T_strict - (T_strict - T_lenient) * sqrt(retrieval_score)
+          sigmoid: T = T_lenient + (T_strict - T_lenient) / (1 + exp(k*(rs - pivot)))
+        """
+        if method == "sqrt":
+            threshold = (T_strict
+                         - (T_strict - T_lenient) * math.sqrt(retrieval_score))
+        elif method == "sigmoid":
+            threshold = (T_lenient
+                         + (T_strict - T_lenient)
+                         / (1 + math.exp(sigmoid_k
+                                         * (retrieval_score - sigmoid_pivot))))
+        else:
+            raise ValueError(f"Unknown continuous method: {method}")
+
+        is_verified = nli_score >= threshold
+
+        return {
+            "status": "VERIFIED" if is_verified else "HALLUCINATION",
+            "mode": f"CONTINUOUS_{method.upper()}",
+            "threshold": round(threshold, 4),
+            "nli_score": nli_score,
+            "retrieval_score": retrieval_score,
+            "passed": is_verified,
+        }
+
+    def evaluate_sample(
+        self,
+        knowledge: str,
+        query: str,
+        response: str,
+        condition: str,
+        params: dict,
+    ) -> dict:
+        """Evaluate a single sample under a given condition (C1/C2/C3).
+
+        Args:
+            knowledge: Ground-truth context passage
+            query: Retrieval query (question for QA, response for summarization)
+            response: The response to evaluate
+            condition: "C1", "C2", or "C3"
+            params: Condition-specific parameters
+
+        Returns:
+            dict with prediction, retrieval_score, nli_score, threshold, latency_ms
+        """
+        start = time.perf_counter()
+
+        retrieval_score = self.compute_retrieval_score(query, knowledge)
+
+        if condition == "C1":
+            # RAG-only baseline: no NLI, always accepts
+            nli_score = None
+            prediction = 0
+            threshold = None
+
+        elif condition == "C2":
+            # Standard CONLI: fixed threshold
+            nli_score = self.verify(premise=knowledge, hypothesis=response)
+            T_static = params["T_static"]
+            prediction = 0 if nli_score >= T_static else 1
+            threshold = T_static
+
+        elif condition == "C3":
+            # Cw-CONLI: dynamic threshold
+            nli_score = self.verify(premise=knowledge, hypothesis=response)
+            method = params.get("method", "tiered")
+
+            if method == "tiered":
+                verdict = self.calculate_verdict(
+                    retrieval_score, nli_score,
+                    params["pivot"], params["T_strict"], params["T_lenient"],
+                )
+            else:
+                verdict = self.calculate_verdict_continuous(
+                    retrieval_score, nli_score,
+                    params["T_strict"], params["T_lenient"],
+                    method=method,
+                    sigmoid_k=params.get("sigmoid_k", 10),
+                    sigmoid_pivot=params.get("sigmoid_pivot", 0.5),
+                )
+            prediction = 0 if verdict["passed"] else 1
+            threshold = verdict["threshold"]
+        else:
+            raise ValueError(f"Unknown condition: {condition}")
+
+        elapsed = time.perf_counter() - start
+
+        return {
+            "prediction": prediction,
+            "retrieval_score": retrieval_score,
+            "nli_score": nli_score,
+            "threshold": threshold,
+            "latency_ms": round(elapsed * 1000, 2),
+        }
+
+    def precompute_scores(
+        self, knowledge: str, query: str, response: str
+    ) -> dict:
+        """Pre-compute retrieval and NLI scores (condition-independent).
+
+        Used by the evaluation harness to separate expensive model inference
+        from fast threshold sweeping.
+        """
+        start = time.perf_counter()
+        retrieval_score = self.compute_retrieval_score(query, knowledge)
+        nli_score = self.verify(premise=knowledge, hypothesis=response)
+        elapsed = time.perf_counter() - start
+
+        return {
+            "retrieval_score": retrieval_score,
+            "nli_score": nli_score,
+            "latency_ms": round(elapsed * 1000, 2),
+        }
+
+    # ==================================================================
+    # Shared-Index Retrieval (Experiment 2 - Realistic Retrieval)
+    # ==================================================================
+
+    def build_index(self, passages: list, batch_size: int = 64):
+        """Build a FAISS index from an arbitrary list of passages.
+
+        Args:
+            passages: List of text passages to index
+            batch_size: Encoding batch size
+
+        Returns:
+            faiss.IndexFlatIP index
+        """
+        all_embeddings = []
+        for i in range(0, len(passages), batch_size):
+            batch = passages[i:i + batch_size]
+            emb = self._encode(batch)
+            all_embeddings.append(emb)
+
+        embeddings = np.vstack(all_embeddings)
+        dimension = embeddings.shape[1]
+        index = faiss.IndexFlatIP(dimension)
+        index.add(embeddings)
+        return index
+
+    def retrieve_from_index(
+        self, query: str, index, passages: list, k: int = 2
+    ) -> dict:
+        """Retrieve top-k passages from a given FAISS index.
+
+        Args:
+            query: Search query
+            index: FAISS index to search
+            passages: Original passages (aligned with index)
+            k: Number of results
+
+        Returns:
+            dict with context, retrieval_score, documents
+        """
+        query_emb = self._encode([query])
+        scores, indices = index.search(query_emb, k)
+
+        raw_score = float(scores[0][0])
+        retrieval_score = (raw_score + 1) / 2  # [-1, 1] -> [0, 1]
+
+        documents = [passages[int(idx)] for idx in indices[0]
+                     if 0 <= int(idx) < len(passages)]
+        context = "\n\n".join(documents)
+
+        return {
+            "context": context,
+            "retrieval_score": round(retrieval_score, 4),
+            "documents": documents,
         }
