@@ -13,8 +13,8 @@ os.environ["MKL_NUM_THREADS"] = "1"
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
+import threading
+from pydantic import BaseModel, Field
 from engine import AFLHREngine
 from config import (
     DEFAULT_PIVOT,
@@ -41,7 +41,7 @@ def root():
     <body style="font-family:system-ui;max-width:600px;margin:60px auto;color:#333">
     <h1>AFLHR Lite API v2</h1>
     <p>The backend is running. Open the frontend at
-    <a href="http://localhost:3001">http://localhost:3001</a></p>
+    <a href="http://localhost:3000">http://localhost:3000</a></p>
     <h3>Endpoints:</h3>
     <ul>
     <li><code>GET /api/health</code> — Health check</li>
@@ -56,6 +56,7 @@ def root():
 # Engine instances — v1 loaded at startup, v2 loaded on first v2 request
 engine_v1: AFLHREngine | None = None
 engine_v2: AFLHREngine | None = None
+_v2_lock = threading.Lock()
 
 
 @app.on_event("startup")
@@ -67,17 +68,20 @@ def startup():
 
 
 def get_v2_engine():
-    """Lazy-load v2 engine on first v2 request."""
+    """Lazy-load v2 engine on first v2 request (thread-safe)."""
     global engine_v2
-    if engine_v2 is None:
-        print("Loading AFLHR Engine (v2: windowed + decomposition + calibration + BGE)...")
-        engine_v2 = AFLHREngine(
-            use_windowed_nli=True,
-            use_decomposition=True,
-            use_calibration=True,
-            use_bge_embeddings=True,
-        )
-        print("Engine v2 ready.")
+    if engine_v2 is not None:
+        return engine_v2
+    with _v2_lock:
+        if engine_v2 is None:
+            print("Loading AFLHR Engine (v2: windowed + decomposition + calibration + BGE)...")
+            engine_v2 = AFLHREngine(
+                use_windowed_nli=True,
+                use_decomposition=True,
+                use_calibration=True,
+                use_bge_embeddings=True,
+            )
+            print("Engine v2 ready.")
     return engine_v2
 
 
@@ -105,7 +109,7 @@ class VerifyResponse(BaseModel):
     version: str = "v1"
     nli_method: str = "whole"
     n_claims: int = 1
-    per_claim: list[ClaimScore] = []
+    per_claim: list[ClaimScore] = Field(default_factory=list)
 
 
 @app.post("/api/verify", response_model=VerifyResponse)
