@@ -336,16 +336,24 @@ class AFLHREngine:
         # RoBERTa uses: <s> premise </s></s> hypothesis </s> = 4 special tokens
         available_for_premise = 512 - len(hypothesis_ids) - 4
 
+        if available_for_premise <= 0:
+            # Hypothesis alone exceeds limit; fall back to single-pass with truncation
+            score = self.verify(premise, hypothesis)
+            return {"score": score, "n_windows": 1, "method": "single_pass_truncated"}
+
         if len(premise_ids) <= available_for_premise:
             # Single-pass is fine
             score = self.verify(premise, hypothesis)
             return {"score": score, "n_windows": 1, "method": "single_pass"}
 
+        # Cap window size to what actually fits alongside the hypothesis
+        effective_window = min(max_premise_tokens, available_for_premise)
+
         # Split premise into overlapping windows
         window_scores = []
         start = 0
         while start < len(premise_ids):
-            end = min(start + max_premise_tokens, len(premise_ids))
+            end = min(start + effective_window, len(premise_ids))
             window_ids = premise_ids[start:end]
 
             # Decode window back to text

@@ -131,8 +131,7 @@ def fit_temperature(logits_path):
     nll_before = nll(1.0)
 
     result = minimize_scalar(nll, bounds=(0.1, 10.0), method="bounded")
-    T_opt = result.fun  # this is the minimum NLL value
-    T_opt = result.x    # this is the optimal temperature
+    T_opt = result.x    # optimal temperature
 
     nll_after = nll(T_opt)
 

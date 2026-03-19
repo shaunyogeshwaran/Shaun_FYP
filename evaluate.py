@@ -525,7 +525,7 @@ def main():
         task_tag = args.task or "all"
         result_path = os.path.join(
             RESULTS_DIR,
-            f"eval_{args.condition}_{args.split}_{task_tag}{version_suffix}.json",
+            f"eval_{args.condition}_{args.split}_{task_tag}{suffix}{version_suffix}.json",
         )
         with open(result_path, "w") as f:
             json.dump(result, f, indent=2)

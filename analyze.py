@@ -44,6 +44,12 @@ def load_tuning_results(suffix_key=None):
                 print(f"  Tuning results not found at {path}, using {fallback_path}")
                 path = fallback_path
                 break
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Tuning results not found. Tried: {path}"
+            + (f" (and fallbacks for '{suffix_key}')" if suffix_key else "")
+            + f"\nRun: python tune.py --split dev"
+        )
     with open(path) as f:
         return json.load(f)
 
