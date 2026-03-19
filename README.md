@@ -4,6 +4,8 @@
 
 A two-layer verification pipeline that combines Retrieval-Augmented Generation (RAG) with Natural Language Inference (NLI) to detect hallucinations in LLM outputs. The core innovation is **Confidence-Weighted CONLI (Cw-CONLI)**: the NLI verification threshold adapts dynamically based on retrieval confidence, applying stricter scrutiny when evidence quality is low and more lenient thresholds when strong supporting evidence exists.
 
+**v2** extends the pipeline with sliding-window NLI, sentence-level claim decomposition, NLI temperature scaling, and an optional embedding model upgrade — addressing known limitations around token truncation, semantic illusion, and uncalibrated NLI outputs.
+
 ## Author
 
 - **Name:** Shaun Yogeshwaran
@@ -83,7 +85,7 @@ The evaluation pipeline uses HaluEval (10K QA + 10K Summarization samples) to be
 - **C2 (Static CONLI):** Fixed NLI threshold
 - **C3 (Cw-CONLI):** Dynamic threshold weighted by retrieval confidence (tiered, sqrt, sigmoid variants)
 
-### Full Pipeline
+### v1 Pipeline (Baseline)
 
 ```bash
 # Step 1: Verify dataset loading
@@ -103,6 +105,59 @@ python evaluate.py --condition C3 --split test
 
 # Step 5: Generate figures, comparison tables, and statistical tests
 python analyze.py --split test
+```
+
+### v2 Pipeline (Improved)
+
+v2 adds four improvements over the baseline:
+
+| Improvement | Problem Addressed | Approach |
+|---|---|---|
+| Sliding-window NLI | RoBERTa 512-token limit truncates long premises | Split premise into overlapping windows, take max entailment |
+| Claim decomposition | Whole-response NLI washes out single altered facts | Split hypothesis into sentences, take min score (weakest-link) |
+| Temperature scaling | Raw softmax outputs are uncalibrated | Fit temperature T on dev logits (Guo et al. 2017) |
+| Embedding upgrade | all-MiniLM-L6-v2 is outdated (2021, 384-dim) | Optional swap to BAAI/bge-small-en-v1.5 (same dim, better quality) |
+
+**Automated pipeline** (recommended):
+
+```bash
+python run_v2.py                   # full run (leave overnight)
+python run_v2.py --limit 50        # smoke test (~minutes)
+python run_v2.py --realistic       # includes shared-index retrieval experiment
+python run_v2.py --skip-calibrate  # reuse existing calibration
+python run_v2.py --skip-precompute # reuse existing precomputed scores
+```
+
+**Manual step-by-step:**
+
+```bash
+# Step 1: Calibrate NLI temperature on dev set
+python calibrate.py --split dev
+
+# Step 2: Pre-compute v2 scores (decomposition + windowed NLI + calibration + BGE)
+python evaluate.py --precompute --split dev --version v2
+python evaluate.py --precompute --split test --version v2
+
+# Step 3: Tune thresholds on dev
+python tune.py --split dev --version v2
+
+# Step 4: Evaluate on test
+python evaluate.py --condition C1 --split test --version v2
+python evaluate.py --condition C2 --split test --version v2
+python evaluate.py --condition C3 --split test --version v2
+
+# Step 5: Generate analysis (includes v2-specific plots)
+python analyze.py --split test --version v2
+```
+
+### Ablation Study
+
+v2 scores include both decomposed (`nli_score`) and whole-response (`nli_score_whole`) NLI scores, enabling ablation via the `--nli-key` flag:
+
+```bash
+# Tune/evaluate using whole-response NLI on v2 data (isolates calibration + embedding effect)
+python tune.py --split dev --version v2 --nli-key nli_score_whole
+python evaluate.py --condition C3 --split test --version v2 --nli-key nli_score_whole
 ```
 
 ### Realistic Retrieval Experiment (QA only)
@@ -126,6 +181,8 @@ Shaun_FYP/
 ├── evaluate.py         # Evaluation harness (precompute scores, apply conditions)
 ├── tune.py             # Grid search hyperparameter tuning
 ├── analyze.py          # Results analysis, plots, McNemar's test
+├── calibrate.py        # NLI temperature scaling calibration (v2)
+├── run_v2.py           # Automated v2 experiment pipeline
 ├── test_components.py  # Component smoke tests
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Environment variable template
@@ -146,11 +203,11 @@ Shaun_FYP/
 
 ## Key Models
 
-| Component | Model | Purpose |
-|-----------|-------|---------|
-| Embeddings | `all-MiniLM-L6-v2` | Semantic similarity for retrieval |
-| NLI Verifier | `RoBERTa-large-MNLI` | Entailment scoring for verification |
-| LLM Generator | `Llama-3.1-8B-Instant` (via Groq) | Response generation |
+| Component | Model (v1) | Model (v2) | Purpose |
+|-----------|------------|------------|---------|
+| Embeddings | `all-MiniLM-L6-v2` | `BAAI/bge-small-en-v1.5` | Semantic similarity for retrieval |
+| NLI Verifier | `RoBERTa-large-MNLI` | `RoBERTa-large-MNLI` + temp. scaling | Entailment scoring for verification |
+| LLM Generator | `Llama-3.1-8B-Instant` (via Groq) | same | Response generation |
 
 ## License
 
