@@ -75,6 +75,10 @@ The **v2 Mode** toggle in the control panel enables:
 
 When v2 is active, the verification column shows a per-claim score breakdown highlighting the weakest claim.
 
+### Offline Mode
+
+The interface works **without an API key** (uses mock LLM responses; RAG and NLI verification still function).
+
 ## Running Experiments
 
 The evaluation pipeline uses HaluEval (10K QA + 10K Summarization samples) to benchmark three conditions:

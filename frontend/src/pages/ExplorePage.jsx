@@ -20,6 +20,7 @@ export default function ExplorePage() {
   const [results, setResults] = useState([])
   const [running, setRunning] = useState(false)
   const [currentIdx, setCurrentIdx] = useState(-1)
+  const [v2Mode, setV2Mode] = useState(false)
 
   const runBatch = async () => {
     setRunning(true); setResults([])
@@ -27,8 +28,16 @@ export default function ExplorePage() {
       setCurrentIdx(i)
       try {
         const res = await fetch(`${API}/api/verify`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: BATCH_QUERIES[i].query, pivot: 0.75, strict_threshold: 0.95, lenient_threshold: 0.70, offline_mode: true }),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: BATCH_QUERIES[i].query,
+            pivot: 0.75,
+            strict_threshold: 0.95,
+            lenient_threshold: 0.70,
+            offline_mode: true,
+            v2_mode: v2Mode,
+          }),
         })
         if (!res.ok) throw new Error(`${res.status}`)
         const data = await res.json()
@@ -58,17 +67,32 @@ export default function ExplorePage() {
             Run multiple queries through the pipeline and compare results side-by-side.
           </p>
         </div>
-        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={runBatch} disabled={running}
-          style={{
-            padding: '12px 32px', borderRadius: 10, border: `1px solid ${colors.primary}`,
-            background: running ? colors.bgElevated : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-            color: running ? colors.textMuted : (colors.bg === '#06060b' ? '#0a0a0a' : '#fff'),
-            fontFamily: fonts.display, fontWeight: 700, fontSize: 13, cursor: running ? 'wait' : 'pointer',
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-          }}
-        >
-          {running ? `Running ${currentIdx + 1}/${BATCH_QUERIES.length}...` : 'Run All Queries'}
-        </motion.button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+            fontFamily: fonts.mono, fontSize: 11,
+            color: v2Mode ? colors.primary : colors.textMuted,
+            padding: '10px 16px', borderRadius: 10,
+            border: `1px solid ${v2Mode ? colors.primary + '40' : colors.border}`,
+            background: v2Mode ? `${colors.primary}10` : colors.bgSurface,
+            transition: 'all 0.2s',
+          }}>
+            <input type="checkbox" checked={v2Mode} onChange={e => setV2Mode(e.target.checked)} />
+            v2
+          </label>
+          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={runBatch} disabled={running}
+            style={{
+              padding: '12px 32px', borderRadius: 10, border: `1px solid ${colors.primary}`,
+              background: running ? colors.bgElevated : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
+              color: running ? colors.textMuted : (colors.bg === '#06060b' ? '#0a0a0a' : '#fff'),
+              fontFamily: fonts.display, fontWeight: 700, fontSize: 13, cursor: running ? 'wait' : 'pointer',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}
+          >
+            {running ? `Running ${currentIdx + 1}/${BATCH_QUERIES.length}...` : 'Run All Queries'}
+          </motion.button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -123,8 +147,8 @@ export default function ExplorePage() {
               >
                 <div style={{ fontFamily: fonts.body, fontSize: 13, color: colors.text, paddingRight: 16 }}>{r.query}</div>
                 <div><span style={{ fontFamily: fonts.mono, fontSize: 10, padding: '3px 8px', borderRadius: 4, background: colors.bgElevated, border: `1px solid ${colors.border}`, color: colors.textSecondary }}>{r.category}</span></div>
-                <div style={{ fontFamily: fonts.mono, fontSize: 12, color: r.result ? colors.retrieve : colors.textMuted }}>{r.result ? `${(r.result.retrieval.retrieval_score * 100).toFixed(1)}%` : '—'}</div>
-                <div style={{ fontFamily: fonts.mono, fontSize: 12, color: r.result ? colors.verify : colors.textMuted }}>{r.result ? `${(r.result.nli_score * 100).toFixed(1)}%` : '—'}</div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 12, color: r.result ? colors.retrieve : colors.textMuted }}>{r.result ? `${(r.result.retrieval.retrieval_score * 100).toFixed(1)}%` : '--'}</div>
+                <div style={{ fontFamily: fonts.mono, fontSize: 12, color: r.result ? colors.verify : colors.textMuted }}>{r.result ? `${(r.result.nli_score * 100).toFixed(1)}%` : '--'}</div>
                 <div style={{ fontFamily: fonts.mono, fontSize: 11, fontWeight: 600, color: vc, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {r.error ? 'Error' : (<><span style={{ width: 8, height: 8, borderRadius: '50%', background: vc, display: 'inline-block', boxShadow: `0 0 6px ${vc}60` }} />{r.result?.verdict?.status}</>)}
                 </div>
