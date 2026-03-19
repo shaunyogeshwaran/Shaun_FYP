@@ -1,5 +1,6 @@
 # AFLHR Lite - Dependencies
-# Locked versions for stability
+# Requires Python >=3.9, <3.13
+# For exact pinned versions, see requirements-lock.txt
 
 # Core ML/AI
 sentence-transformers>=5.0.0

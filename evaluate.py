@@ -460,7 +460,7 @@ def main():
             engine = AFLHREngine(
                 use_windowed_nli=True,
                 use_decomposition=True,
-                use_calibration=True,
+                use_calibration=False,  # T=10 at boundary — calibration hurts
                 use_bge_embeddings=True,
             )
         else:

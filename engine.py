@@ -73,9 +73,9 @@ class AFLHREngine:
         self.use_calibration = use_calibration
         self.use_bge_embeddings = use_bge_embeddings
 
-        # Use CPU to avoid MPS segfaults
-        self.device = torch.device("cpu")
-        print("Using CPU for all models (stable mode)")
+        # Auto-detect CUDA; skip MPS (segfaults on Apple Silicon)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using {self.device} for all models")
 
         # Select embedding model
         embed_model_id = EMBEDDING_MODEL_V2 if use_bge_embeddings else EMBEDDING_MODEL
@@ -127,12 +127,23 @@ class AFLHREngine:
         print(f"AFLHR Engine initialized [{flag_str}]")
 
     def _load_calibration(self):
-        """Load temperature from calibration file."""
+        """Load temperature from calibration file.
+
+        If T is at the optimizer boundary (>=9.0), it means calibration
+        failed to find a useful temperature — fall back to T=1.0.
+        """
         if os.path.exists(CALIBRATION_TEMP_PATH):
             with open(CALIBRATION_TEMP_PATH) as f:
                 data = json.load(f)
-            self.calibration_T = float(data["temperature"])
-            print(f"Loaded calibration temperature: {self.calibration_T:.4f}")
+            T = float(data["temperature"])
+            if T >= 9.0:
+                print(f"Warning: calibration T={T:.4f} is at optimizer boundary "
+                      f"— NLI logits are not calibratable for this task. "
+                      f"Falling back to T=1.0 (uncalibrated).")
+                self.calibration_T = 1.0
+            else:
+                self.calibration_T = T
+                print(f"Loaded calibration temperature: {self.calibration_T:.4f}")
         else:
             print(f"Warning: calibration file not found at {CALIBRATION_TEMP_PATH}, using T=1.0")
 
