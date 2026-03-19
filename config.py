@@ -18,6 +18,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 # Model IDs
 # =============================================================================
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL_V2 = "BAAI/bge-small-en-v1.5"
 VERIFIER_MODEL = "FacebookAI/roberta-large-mnli"
 GENERATOR_MODEL = "llama-3.1-8b-instant"  # Groq model ID
 
@@ -121,3 +122,14 @@ GRID_C3_T_LENIENT = {"min": 0.60, "max": 0.85, "step": 0.05}
 
 GRID_C3_CONT_T_STRICT = {"min": 0.85, "max": 0.99, "step": 0.02}
 GRID_C3_CONT_T_LENIENT = {"min": 0.50, "max": 0.85, "step": 0.05}
+
+# =============================================================================
+# Sliding-Window NLI Configuration
+# =============================================================================
+NLI_MAX_PREMISE_TOKENS = 400   # max premise tokens per window (leaves room for hypothesis)
+NLI_STRIDE_TOKENS = 200        # overlap between windows
+
+# =============================================================================
+# Calibration
+# =============================================================================
+CALIBRATION_TEMP_PATH = os.path.join(RESULTS_DIR, "calibration_temperature.json")
