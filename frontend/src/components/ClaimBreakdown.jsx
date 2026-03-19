@@ -1,23 +1,19 @@
 import { motion } from 'framer-motion'
-import { colors, fonts } from '../styles/theme'
+import { useTheme } from '../ThemeContext'
+import { fonts } from '../styles/theme'
 
 export default function ClaimBreakdown({ claims, threshold }) {
+  const { colors } = useTheme()
+
   if (!claims || claims.length === 0) return null
 
   const minScore = Math.min(...claims.map(c => c.score))
 
   return (
-    <div style={{
-      marginTop: 12,
-    }}>
+    <div style={{ marginTop: 12 }}>
       <div style={{
-        fontFamily: fonts.display,
-        fontSize: 10,
-        fontWeight: 700,
-        color: colors.textMuted,
-        textTransform: 'uppercase',
-        letterSpacing: '0.12em',
-        marginBottom: 8,
+        fontFamily: fonts.display, fontSize: 10, fontWeight: 700, color: colors.textMuted,
+        textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8,
       }}>
         Per-Claim Breakdown ({claims.length} claim{claims.length !== 1 ? 's' : ''})
       </div>
@@ -35,73 +31,37 @@ export default function ClaimBreakdown({ claims, threshold }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.8 + i * 0.1 }}
               style={{
-                padding: '8px 12px',
-                borderRadius: 8,
-                background: colors.bgElevated,
+                padding: '8px 12px', borderRadius: 8, background: colors.bgElevated,
                 border: `1px solid ${isWeakest ? `${colors.hallucination}40` : colors.border}`,
               }}
             >
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: 4,
-              }}>
-                <span style={{
-                  fontFamily: fonts.body,
-                  fontSize: 11,
-                  color: colors.textSecondary,
-                  flex: 1,
-                  lineHeight: 1.4,
-                  marginRight: 12,
-                }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontFamily: fonts.body, fontSize: 11, color: colors.textSecondary, flex: 1, lineHeight: 1.4, marginRight: 12 }}>
                   {c.claim}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   {isWeakest && (
                     <span style={{
-                      fontFamily: fonts.mono,
-                      fontSize: 8,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      background: colors.hallucinationDim,
-                      color: colors.hallucination,
-                      border: `1px solid rgba(255,51,102,0.2)`,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
+                      fontFamily: fonts.mono, fontSize: 8, padding: '2px 6px', borderRadius: 4,
+                      background: colors.hallucinationDim, color: colors.hallucination,
+                      border: `1px solid ${colors.hallucinationGlow}`,
+                      textTransform: 'uppercase', letterSpacing: '0.05em',
                     }}>
                       weakest
                     </span>
                   )}
-                  <span style={{
-                    fontFamily: fonts.mono,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: barColor,
-                    minWidth: 44,
-                    textAlign: 'right',
-                  }}>
+                  <span style={{ fontFamily: fonts.mono, fontSize: 12, fontWeight: 600, color: barColor, minWidth: 44, textAlign: 'right' }}>
                     {(c.score * 100).toFixed(1)}%
                   </span>
                 </div>
               </div>
 
-              {/* Score bar */}
-              <div style={{
-                height: 3,
-                borderRadius: 2,
-                background: `${colors.border}`,
-                overflow: 'hidden',
-              }}>
+              <div style={{ height: 3, borderRadius: 2, background: colors.border, overflow: 'hidden' }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${c.score * 100}%` }}
                   transition={{ duration: 0.6, delay: 0.9 + i * 0.1 }}
-                  style={{
-                    height: '100%',
-                    borderRadius: 2,
-                    background: barColor,
-                  }}
+                  style={{ height: '100%', borderRadius: 2, background: barColor }}
                 />
               </div>
             </motion.div>
@@ -110,13 +70,7 @@ export default function ClaimBreakdown({ claims, threshold }) {
       </div>
 
       {claims.length > 1 && (
-        <div style={{
-          marginTop: 8,
-          fontFamily: fonts.mono,
-          fontSize: 10,
-          color: colors.textMuted,
-          textAlign: 'center',
-        }}>
+        <div style={{ marginTop: 8, fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, textAlign: 'center' }}>
           Final score = min({claims.map(c => `${(c.score * 100).toFixed(1)}%`).join(', ')}) = {(minScore * 100).toFixed(1)}%
         </div>
       )}
