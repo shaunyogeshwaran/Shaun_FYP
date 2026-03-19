@@ -20,7 +20,17 @@ function Slider({ label, value, onChange, min = 0, max = 1, step = 0.01, tooltip
   )
 }
 
+<<<<<<< Updated upstream
 export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, lenient, setLenient, offline, setOffline }) {
+=======
+export default function ThresholdPanel({
+  pivot, setPivot,
+  strict, setStrict,
+  lenient, setLenient,
+  offline, setOffline,
+  v2Mode, setV2Mode,
+}) {
+>>>>>>> Stashed changes
   const [open, setOpen] = useState(true)
   const { colors } = useTheme()
 
@@ -78,6 +88,7 @@ export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, len
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.border}`,
               }}>
+<<<<<<< Updated upstream
                 <label style={{
                   display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                   fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary,
@@ -87,6 +98,57 @@ export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, len
                   <span style={{ color: colors.textMuted, fontSize: 11 }}>— mock LLM, real RAG + NLI</span>
                 </label>
                 <div style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, display: 'flex', gap: 16 }}>
+=======
+                <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    cursor: 'pointer',
+                    fontFamily: fonts.body,
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={offline}
+                      onChange={e => setOffline(e.target.checked)}
+                    />
+                    Offline Mode
+                    <span style={{ color: colors.textMuted, fontSize: 11 }}>
+                      — mock LLM, real RAG + NLI
+                    </span>
+                  </label>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    cursor: 'pointer',
+                    fontFamily: fonts.body,
+                    fontSize: 12,
+                    color: v2Mode ? colors.primary : colors.textSecondary,
+                    transition: 'color 0.2s',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={v2Mode}
+                      onChange={e => setV2Mode(e.target.checked)}
+                    />
+                    v2 Mode
+                    <span style={{ color: colors.textMuted, fontSize: 11 }}>
+                      — windowed NLI + claim decomposition + calibration
+                    </span>
+                  </label>
+                </div>
+
+                <div style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 10,
+                  color: colors.textMuted,
+                  display: 'flex',
+                  gap: 16,
+                }}>
+>>>>>>> Stashed changes
                   <span>P={pivot.toFixed(2)}</span>
                   <span>T<sub>s</sub>={strict.toFixed(2)}</span>
                   <span>T<sub>l</sub>={lenient.toFixed(2)}</span>

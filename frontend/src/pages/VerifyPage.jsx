@@ -7,6 +7,7 @@ import PipelineStages from '../components/PipelineStages'
 import ThresholdPanel from '../components/ThresholdPanel'
 import VerdictStamp from '../components/VerdictStamp'
 import DocumentCard from '../components/DocumentCard'
+import ClaimBreakdown from '../components/ClaimBreakdown'
 
 const API = ''
 
@@ -55,6 +56,7 @@ export default function VerifyPage() {
   const [strict, setStrict] = useState(0.95)
   const [lenient, setLenient] = useState(0.70)
   const [offline, setOffline] = useState(false)
+  const [v2Mode, setV2Mode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -77,7 +79,18 @@ export default function VerifyPage() {
       const res = await fetch(`${API}/api/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+<<<<<<< Updated upstream
         body: JSON.stringify({ query, pivot, strict_threshold: strict, lenient_threshold: lenient, offline_mode: offline }),
+=======
+        body: JSON.stringify({
+          query,
+          pivot,
+          strict_threshold: strict,
+          lenient_threshold: lenient,
+          offline_mode: offline,
+          v2_mode: v2Mode,
+        }),
+>>>>>>> Stashed changes
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)
       const data = await res.json()
@@ -157,7 +170,17 @@ export default function VerifyPage() {
 
       {/* Controls */}
       <div style={{ marginBottom: 20 }}>
+<<<<<<< Updated upstream
         <ThresholdPanel pivot={pivot} setPivot={setPivot} strict={strict} setStrict={setStrict} lenient={lenient} setLenient={setLenient} offline={offline} setOffline={setOffline} />
+=======
+        <ThresholdPanel
+          pivot={pivot} setPivot={setPivot}
+          strict={strict} setStrict={setStrict}
+          lenient={lenient} setLenient={setLenient}
+          offline={offline} setOffline={setOffline}
+          v2Mode={v2Mode} setV2Mode={setV2Mode}
+        />
+>>>>>>> Stashed changes
       </div>
 
       {/* Pipeline stages */}
@@ -274,8 +297,44 @@ export default function VerifyPage() {
                     </svg>
                   </div>
                   <div>
+<<<<<<< Updated upstream
                     <h2 style={{ fontFamily: fonts.display, fontSize: 14, fontWeight: 700, color: colors.verify }}>Verification</h2>
                     <span style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>NLI Analysis</span>
+=======
+                    <h2 style={{
+                      fontFamily: fonts.display,
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: colors.verify,
+                      letterSpacing: '-0.01em',
+                    }}>
+                      Verification
+                    </h2>
+                    <span style={{
+                      fontFamily: fonts.mono,
+                      fontSize: 10,
+                      color: colors.textMuted,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                    }}>
+                      NLI Analysis
+                    </span>
+                    {result.version === 'v2' && (
+                      <span style={{
+                        marginLeft: 'auto',
+                        fontFamily: fonts.mono,
+                        fontSize: 9,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        background: `${colors.primary}18`,
+                        color: colors.primary,
+                        border: `1px solid ${colors.primary}30`,
+                        letterSpacing: '0.05em',
+                      }}>
+                        v2
+                      </span>
+                    )
+>>>>>>> Stashed changes
                   </div>
                 </div>
 
@@ -304,7 +363,35 @@ export default function VerifyPage() {
                   {result.verdict.reasoning}
                 </div>
 
+<<<<<<< Updated upstream
                 <div style={{ textAlign: 'center' }}><VerdictStamp status={result.verdict.status} /></div>
+=======
+                {/* Per-claim breakdown (v2 only) */}
+                {result.per_claim && result.per_claim.length > 1 && (
+                  <ClaimBreakdown
+                    claims={result.per_claim}
+                    threshold={result.verdict.threshold}
+                  />
+                )}
+
+                {/* NLI method indicator */}
+                {result.nli_method && result.nli_method !== 'whole' && (
+                  <div style={{
+                    marginBottom: 12,
+                    fontFamily: fonts.mono,
+                    fontSize: 10,
+                    color: colors.textMuted,
+                    textAlign: 'center',
+                  }}>
+                    Method: {result.nli_method} ({result.n_claims} claim{result.n_claims !== 1 ? 's' : ''})
+                  </div>
+                )}
+
+                {/* Verdict Stamp */}
+                <div style={{ textAlign: 'center' }}>
+                  <VerdictStamp status={result.verdict.status} />
+                </div>
+>>>>>>> Stashed changes
 
                 <div style={{
                   marginTop: 16, fontFamily: fonts.mono, fontSize: 10, color: colors.textSecondary,

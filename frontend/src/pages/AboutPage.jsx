@@ -69,8 +69,78 @@ export default function AboutPage() {
 
       {/* Pipeline steps */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+<<<<<<< Updated upstream
         {stages.map((stage, i) => (
           <motion.div key={stage.step} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+=======
+        {[
+          {
+            step: '01',
+            title: 'Retrieve Evidence',
+            color: colors.retrieve,
+            icon: (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+            ),
+            desc: 'The user\'s query is encoded into a 384-dimensional vector using a sentence transformer. FAISS performs cosine similarity search against the indexed knowledge base, returning the top-2 most relevant passages.',
+            detail: 'The retrieval confidence score (0-1) measures how semantically similar the best match is to the query. This score becomes the key input for the adaptive threshold. v2 upgrades to BGE-small-en-v1.5 for higher retrieval fidelity.',
+            model: 'all-MiniLM-L6-v2 / BGE-small (v2)',
+            output: 'Retrieval score + top-k documents',
+          },
+          {
+            step: '02',
+            title: 'Generate Response',
+            color: colors.generate,
+            icon: (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            ),
+            desc: 'The retrieved context is combined with the query and sent to Llama-3.1-8B-Instant via the Groq API. The LLM generates a grounded response using only the provided evidence.',
+            detail: 'Temperature is set to 0.1 for deterministic, factual responses. An offline mode is available that returns a mock response while still running the full RAG + NLI pipeline.',
+            model: 'Llama-3.1-8B-Instant (Groq)',
+            output: 'Generated text response',
+          },
+          {
+            step: '03',
+            title: 'Verify via NLI',
+            color: colors.verify,
+            icon: (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            ),
+            desc: 'RoBERTa-large-MNLI performs Natural Language Inference: the retrieved context is the premise, and the generated response is the hypothesis. The model outputs entailment, neutral, and contradiction probabilities.',
+            detail: 'v2 adds three improvements: sliding-window NLI (splits long premises into overlapping chunks for documents exceeding 512 tokens), sentence-level claim decomposition (verifies each claim independently, takes the minimum score), and temperature-scaled calibration for better-calibrated confidence outputs.',
+            model: 'RoBERTa-large-MNLI + calibration (v2)',
+            output: 'Entailment score (0-1) + per-claim scores (v2)',
+          },
+          {
+            step: '04',
+            title: 'Adaptive Verdict',
+            color: colors.verdict,
+            icon: (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            ),
+            desc: 'Here is where Cw-CONLI differs from standard approaches. Instead of a fixed threshold, the system computes a dynamic threshold based on retrieval confidence:',
+            detail: 'When retrieval is strong (above the pivot), a lenient threshold is used — the system trusts the evidence. When retrieval is weak (below the pivot), a strict threshold is applied — the system demands stronger NLI entailment before accepting the response.',
+            model: 'Tiered / Sqrt / Sigmoid variants',
+            output: 'VERIFIED or HALLUCINATION',
+          },
+        ].map((stage, i) => (
+          <motion.div
+            key={stage.step}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+>>>>>>> Stashed changes
             style={{
               display: 'grid', gridTemplateColumns: '80px 1fr', gap: 24, padding: 28,
               background: colors.bgSurface, backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
@@ -131,8 +201,27 @@ export default function AboutPage() {
         <h2 style={{ fontFamily: fonts.display, fontSize: 20, fontWeight: 800, color: colors.text, marginBottom: 20 }}>
           Technical <span style={{ color: colors.primary }}>Stack</span>
         </h2>
+<<<<<<< Updated upstream
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
           {techStack.map(item => (
+=======
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+        }}>
+          {[
+            { label: 'Embeddings', value: 'MiniLM-L6-v2 / BGE-small-v1.5 (v2)', color: colors.retrieve },
+            { label: 'Vector Index', value: 'FAISS IndexFlatIP (CPU)', color: colors.retrieve },
+            { label: 'NLI Verifier', value: 'RoBERTa-large-MNLI + temp scaling (v2)', color: colors.verify },
+            { label: 'LLM Generator', value: 'Llama-3.1-8B-Instant (Groq)', color: colors.generate },
+            { label: 'Backend', value: 'FastAPI + Python 3.11', color: colors.textSecondary },
+            { label: 'Frontend', value: 'React 18 + Vite', color: colors.textSecondary },
+            { label: 'Evaluation', value: 'HaluEval (20K samples, QA + Summarization)', color: colors.primary },
+            { label: 'Compute', value: 'Apple M4, 24GB RAM, CPU-only', color: colors.primary },
+          ].map(item => (
+>>>>>>> Stashed changes
             <div key={item.label} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px',
               borderRadius: 8, background: colors.bgElevated, border: `1px solid ${colors.border}`,
