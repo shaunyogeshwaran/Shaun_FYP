@@ -62,7 +62,7 @@ export default function Header({ health }) {
               letterSpacing: '-0.02em',
               lineHeight: 1,
             }}>
-              AFLHR <span style={{ color: colors.primary }}>Lite</span>
+              AFLHR
             </h1>
             <p style={{
               fontFamily: fonts.mono,
