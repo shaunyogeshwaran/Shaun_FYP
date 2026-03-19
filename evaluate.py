@@ -8,10 +8,18 @@ Usage:
   python evaluate.py --precompute --split dev
   python evaluate.py --precompute --split dev --limit 50   # smoke test
 
+  # v2: Pre-compute with decomposition + windowed NLI
+  python evaluate.py --precompute --split dev --version v2
+  python evaluate.py --precompute --split test --version v2
+
   # Evaluate a condition (fast - uses pre-computed scores)
   python evaluate.py --condition C1 --split dev
   python evaluate.py --condition C2 --split dev --params '{"T_static": 0.75}'
   python evaluate.py --condition C3 --split dev --params '{"method":"tiered","pivot":0.75,"T_strict":0.95,"T_lenient":0.70}'
+
+  # v2 evaluation using decomposed NLI scores
+  python evaluate.py --condition C2 --split test --version v2
+  python evaluate.py --condition C2 --split test --version v2 --nli-key nli_score_whole  # ablation
 """
 
 import argparse
@@ -39,8 +47,22 @@ from dataset import load_halueval, split_dev_test
 # Pre-computation
 # ---------------------------------------------------------------------------
 
+# v1 CSV columns (backward compat)
+FIELDNAMES_V1 = [
+    "sample_id", "task", "label", "retrieval_score", "nli_score",
+    "latency_ms",
+]
+
+# v2 CSV columns (superset of v1)
+FIELDNAMES_V2 = [
+    "sample_id", "task", "label", "retrieval_score", "nli_score",
+    "nli_score_whole", "nli_mean_score", "n_claims", "n_windows",
+    "nli_method", "latency_ms",
+]
+
+
 def run_precomputation(engine, samples, output_path, limit=None,
-                       checkpoint_every=100):
+                       checkpoint_every=100, version="v1"):
     """Pre-compute retrieval and NLI scores for all samples.
 
     Supports checkpointing: if output_path already has partial results,
@@ -49,6 +71,8 @@ def run_precomputation(engine, samples, output_path, limit=None,
     from tqdm import tqdm
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    fieldnames = FIELDNAMES_V2 if version == "v2" else FIELDNAMES_V1
 
     # Load existing checkpoint
     computed = {}
@@ -69,11 +93,6 @@ def run_precomputation(engine, samples, output_path, limit=None,
     if not remaining:
         print("All samples already computed.")
         return output_path
-
-    fieldnames = [
-        "sample_id", "task", "label", "retrieval_score", "nli_score",
-        "latency_ms",
-    ]
 
     if not file_exists:
         f = open(output_path, "w", newline="")
@@ -97,14 +116,25 @@ def run_precomputation(engine, samples, output_path, limit=None,
                 response=sample["response"],
             )
 
-            writer.writerow({
+            row = {
                 "sample_id": sample["sample_id"],
                 "task": sample["task"],
                 "label": sample["label"],
                 "retrieval_score": scores["retrieval_score"],
                 "nli_score": scores["nli_score"],
                 "latency_ms": scores["latency_ms"],
-            })
+            }
+
+            if version == "v2":
+                row.update({
+                    "nli_score_whole": scores.get("nli_score_whole", scores["nli_score"]),
+                    "nli_mean_score": scores.get("nli_mean_score", scores["nli_score"]),
+                    "n_claims": scores.get("n_claims", 1),
+                    "n_windows": scores.get("n_windows", 1),
+                    "nli_method": scores.get("nli_method", "whole"),
+                })
+
+            writer.writerow(row)
 
             if (i + 1) % checkpoint_every == 0:
                 f.flush()
@@ -117,7 +147,7 @@ def run_precomputation(engine, samples, output_path, limit=None,
 
 def run_precomputation_realistic(engine, split_samples, all_qa_samples,
                                   output_path, limit=None,
-                                  checkpoint_every=100):
+                                  checkpoint_every=100, version="v1"):
     """Pre-compute scores using realistic shared-index retrieval (QA only).
 
     Builds a FAISS index from ALL QA knowledge passages, then for each
@@ -127,6 +157,8 @@ def run_precomputation_realistic(engine, split_samples, all_qa_samples,
     from tqdm import tqdm
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    fieldnames = FIELDNAMES_V2 if version == "v2" else FIELDNAMES_V1
 
     # Only QA samples
     samples = [s for s in split_samples if s["task"] == "qa"]
@@ -158,11 +190,6 @@ def run_precomputation_realistic(engine, split_samples, all_qa_samples,
         print("All samples already computed.")
         return output_path
 
-    fieldnames = [
-        "sample_id", "task", "label", "retrieval_score", "nli_score",
-        "latency_ms",
-    ]
-
     if not file_exists:
         f = open(output_path, "w", newline="")
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -187,21 +214,49 @@ def run_precomputation_realistic(engine, split_samples, all_qa_samples,
             retrieved_context = result["context"]
 
             # NLI on *retrieved* context (not ground-truth knowledge)
-            nli_score = engine.verify(
-                premise=retrieved_context,
-                hypothesis=sample["response"],
-            )
+            if version == "v2" and (engine.use_decomposition or engine.use_windowed_nli):
+                scores = engine.precompute_scores(
+                    knowledge=retrieved_context,
+                    query=sample["question"],
+                    response=sample["response"],
+                )
+                # Override retrieval_score with the one from shared index
+                scores["retrieval_score"] = retrieval_score
+            else:
+                nli_score = engine.verify(
+                    premise=retrieved_context,
+                    hypothesis=sample["response"],
+                )
+                scores = {
+                    "nli_score": nli_score,
+                    "nli_score_whole": nli_score,
+                    "nli_mean_score": nli_score,
+                    "n_claims": 1,
+                    "n_windows": 1,
+                    "nli_method": "whole",
+                }
 
             elapsed = time.perf_counter() - start
 
-            writer.writerow({
+            row = {
                 "sample_id": sample["sample_id"],
                 "task": sample["task"],
                 "label": sample["label"],
                 "retrieval_score": retrieval_score,
-                "nli_score": nli_score,
+                "nli_score": scores["nli_score"],
                 "latency_ms": round(elapsed * 1000, 2),
-            })
+            }
+
+            if version == "v2":
+                row.update({
+                    "nli_score_whole": scores.get("nli_score_whole", scores["nli_score"]),
+                    "nli_mean_score": scores.get("nli_mean_score", scores["nli_score"]),
+                    "n_claims": scores.get("n_claims", 1),
+                    "n_windows": scores.get("n_windows", 1),
+                    "nli_method": scores.get("nli_method", "whole"),
+                })
+
+            writer.writerow(row)
 
             if (i + 1) % checkpoint_every == 0:
                 f.flush()
@@ -217,24 +272,44 @@ def run_precomputation_realistic(engine, split_samples, all_qa_samples,
 # ---------------------------------------------------------------------------
 
 def load_precomputed(path):
-    """Load pre-computed scores from CSV."""
+    """Load pre-computed scores from CSV (backward-compatible with v1 and v2)."""
     scores = []
     with open(path, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            scores.append({
+            entry = {
                 "sample_id": int(row["sample_id"]),
                 "task": row["task"],
                 "label": int(row["label"]),
                 "retrieval_score": float(row["retrieval_score"]),
                 "nli_score": float(row["nli_score"]),
                 "latency_ms": float(row["latency_ms"]),
-            })
+            }
+            # v2 columns (optional - backward compatible)
+            if "nli_score_whole" in row and row["nli_score_whole"]:
+                entry["nli_score_whole"] = float(row["nli_score_whole"])
+            if "nli_mean_score" in row and row["nli_mean_score"]:
+                entry["nli_mean_score"] = float(row["nli_mean_score"])
+            if "n_claims" in row and row["n_claims"]:
+                entry["n_claims"] = int(row["n_claims"])
+            if "n_windows" in row and row["n_windows"]:
+                entry["n_windows"] = int(row["n_windows"])
+            if "nli_method" in row and row["nli_method"]:
+                entry["nli_method"] = row["nli_method"]
+
+            scores.append(entry)
     return scores
 
 
-def apply_condition(scores, condition, params):
+def apply_condition(scores, condition, params, nli_key="nli_score"):
     """Apply condition logic to pre-computed scores.
+
+    Args:
+        scores: List of score dicts from load_precomputed()
+        condition: "C1", "C2", or "C3"
+        params: Condition-specific parameters
+        nli_key: Which NLI score column to use (default "nli_score",
+                 can be "nli_score_whole" for ablation)
 
     Returns list of predictions (0 = verified, 1 = hallucination).
     """
@@ -245,11 +320,12 @@ def apply_condition(scores, condition, params):
             pred = 0  # Always accept (no NLI)
 
         elif condition == "C2":
-            pred = 0 if s["nli_score"] >= params["T_static"] else 1
+            nli = s.get(nli_key, s["nli_score"])
+            pred = 0 if nli >= params["T_static"] else 1
 
         elif condition == "C3":
             rs = s["retrieval_score"]
-            nli = s["nli_score"]
+            nli = s.get(nli_key, s["nli_score"])
             method = params.get("method", "tiered")
 
             if method == "tiered":
@@ -287,6 +363,12 @@ def compute_metrics(labels, predictions, latencies=None):
     labels = np.array(labels)
     predictions = np.array(predictions)
 
+    if len(labels) == 0:
+        return {
+            "f1": 0.0, "precision": 0.0, "recall": 0.0, "accuracy": 0.0,
+            "over_flagging_rate": 0.0, "tp": 0, "fp": 0, "tn": 0, "fn": 0,
+        }
+
     cm = confusion_matrix(labels, predictions, labels=[0, 1])
     tn, fp, fn, tp = cm.ravel()
 
@@ -313,7 +395,7 @@ def compute_metrics(labels, predictions, latencies=None):
 
 
 def run_evaluation(scores_path, condition, params, split_name="dev",
-                   task_filter=None, limit=None):
+                   task_filter=None, limit=None, nli_key="nli_score"):
     """Run full evaluation for a condition + parameter set."""
     scores = load_precomputed(scores_path)
 
@@ -324,7 +406,7 @@ def run_evaluation(scores_path, condition, params, split_name="dev",
 
     labels = [s["label"] for s in scores]
     latencies = [s["latency_ms"] for s in scores]
-    predictions = apply_condition(scores, condition, params)
+    predictions = apply_condition(scores, condition, params, nli_key=nli_key)
 
     metrics = compute_metrics(labels, predictions, latencies)
 
@@ -333,6 +415,7 @@ def run_evaluation(scores_path, condition, params, split_name="dev",
         "params": params,
         "split": split_name,
         "task": task_filter or "all",
+        "nli_key": nli_key,
         "n_samples": len(scores),
         "metrics": metrics,
     }
@@ -357,17 +440,31 @@ def main():
                         help="JSON string of condition parameters")
     parser.add_argument("--realistic", action="store_true",
                         help="Experiment 2: shared-index retrieval (QA only)")
+    parser.add_argument("--version", default="v1", choices=["v1", "v2"],
+                        help="v1=baseline, v2=decomposition+windowed+calibration")
+    parser.add_argument("--nli-key", default="nli_score",
+                        help="NLI score column to use (default: nli_score)")
     args = parser.parse_args()
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     suffix = "_realistic" if args.realistic else ""
+    version_suffix = f"_{args.version}" if args.version != "v1" else ""
     scores_path = os.path.join(RESULTS_DIR,
-                               f"scores_{args.split}{suffix}.csv")
+                               f"scores_{args.split}{suffix}{version_suffix}.csv")
 
     if args.precompute:
         from engine import AFLHREngine
-        engine = AFLHREngine()
+
+        if args.version == "v2":
+            engine = AFLHREngine(
+                use_windowed_nli=True,
+                use_decomposition=True,
+                use_calibration=True,
+                use_bge_embeddings=True,
+            )
+        else:
+            engine = AFLHREngine()
 
         samples = load_halueval()
         dev, test = split_dev_test(samples)
@@ -377,9 +474,11 @@ def main():
             all_qa = [s for s in samples if s["task"] == "qa"]
             run_precomputation_realistic(
                 engine, data, all_qa, scores_path, limit=args.limit,
+                version=args.version,
             )
         else:
-            run_precomputation(engine, data, scores_path, limit=args.limit)
+            run_precomputation(engine, data, scores_path, limit=args.limit,
+                               version=args.version)
 
     elif args.condition:
         # Parse params (or use defaults)
@@ -401,13 +500,14 @@ def main():
         result = run_evaluation(
             scores_path, args.condition, params,
             split_name=args.split, task_filter=args.task, limit=args.limit,
+            nli_key=args.nli_key,
         )
 
         # Print results
         m = result["metrics"]
         print(f"\n{'='*60}")
         print(f"Condition: {result['condition']} | Split: {result['split']}"
-              f" | Task: {result['task']}")
+              f" | Task: {result['task']} | NLI key: {result['nli_key']}")
         print(f"Params: {result['params']}")
         print(f"N samples: {result['n_samples']}")
         print(f"{'='*60}")
@@ -425,7 +525,7 @@ def main():
         task_tag = args.task or "all"
         result_path = os.path.join(
             RESULTS_DIR,
-            f"eval_{args.condition}_{args.split}_{task_tag}.json",
+            f"eval_{args.condition}_{args.split}_{task_tag}{suffix}{version_suffix}.json",
         )
         with open(result_path, "w") as f:
             json.dump(result, f, indent=2)
