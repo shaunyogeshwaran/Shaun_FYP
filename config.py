@@ -112,7 +112,7 @@ RESULTS_DIR = "results"
 FIGURES_DIR = "results/figures"
 
 # =============================================================================
-# Grid Search Ranges
+# Grid Search Ranges (v1 — uncalibrated NLI scores in ~0.0-1.0 range)
 # =============================================================================
 GRID_C2_T_STATIC = {"min": 0.50, "max": 0.99, "step": 0.01}
 
@@ -122,6 +122,18 @@ GRID_C3_T_LENIENT = {"min": 0.60, "max": 0.85, "step": 0.05}
 
 GRID_C3_CONT_T_STRICT = {"min": 0.85, "max": 0.99, "step": 0.02}
 GRID_C3_CONT_T_LENIENT = {"min": 0.50, "max": 0.85, "step": 0.05}
+
+# =============================================================================
+# Grid Search Ranges (v2 — calibrated NLI scores compressed to ~0.22-0.48)
+# =============================================================================
+GRID_V2_C2_T_STATIC = {"min": 0.28, "max": 0.42, "step": 0.005}
+
+GRID_V2_C3_PIVOT = {"min": 0.50, "max": 0.80, "step": 0.05}
+GRID_V2_C3_T_STRICT = {"min": 0.35, "max": 0.42, "step": 0.005}
+GRID_V2_C3_T_LENIENT = {"min": 0.28, "max": 0.36, "step": 0.005}
+
+GRID_V2_C3_CONT_T_STRICT = {"min": 0.35, "max": 0.42, "step": 0.005}
+GRID_V2_C3_CONT_T_LENIENT = {"min": 0.28, "max": 0.36, "step": 0.005}
 
 # =============================================================================
 # Sliding-Window NLI Configuration
