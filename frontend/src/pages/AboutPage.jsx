@@ -26,8 +26,8 @@ export default function AboutPage() {
       step: '03', title: 'Verify via NLI', color: colors.verify,
       icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
       desc: 'RoBERTa-large-MNLI performs Natural Language Inference: the retrieved context is the premise, and the generated response is the hypothesis.',
-      detail: 'v2 adds three improvements: sliding-window NLI (splits long premises into overlapping chunks for documents exceeding 512 tokens), sentence-level claim decomposition (verifies each claim independently, takes the minimum score), and temperature-scaled calibration for better-calibrated confidence outputs.',
-      model: 'RoBERTa-large-MNLI + calibration (v2)', output: 'Entailment score (0-1) + per-claim scores (v2)',
+      detail: 'v2 adds two improvements: sliding-window NLI (splits long premises into overlapping chunks for documents exceeding 512 tokens) and sentence-level claim decomposition (verifies each claim independently, takes the minimum score as a weakest-link filter).',
+      model: 'RoBERTa-large-MNLI', output: 'Entailment score (0-1) + per-claim scores (v2)',
     },
     {
       step: '04', title: 'Adaptive Verdict', color: colors.verdict,
@@ -47,12 +47,12 @@ export default function AboutPage() {
   const techStack = [
     { label: 'Embeddings', value: 'MiniLM-L6-v2 / BGE-small-v1.5 (v2)', color: colors.retrieve },
     { label: 'Vector Index', value: 'FAISS IndexFlatIP (CPU)', color: colors.retrieve },
-    { label: 'NLI Verifier', value: 'RoBERTa-large-MNLI + temp scaling (v2)', color: colors.verify },
+    { label: 'NLI Verifier', value: 'RoBERTa-large-MNLI', color: colors.verify },
     { label: 'LLM Generator', value: 'Llama-3.1-8B-Instant (Groq)', color: colors.generate },
-    { label: 'Backend', value: 'FastAPI + Python 3.11', color: colors.textSecondary },
+    { label: 'Backend', value: 'FastAPI + Python 3.9+', color: colors.textSecondary },
     { label: 'Frontend', value: 'React 18 + Vite', color: colors.textSecondary },
     { label: 'Evaluation', value: 'HaluEval (20K samples, QA + Summarization)', color: colors.primary },
-    { label: 'Compute', value: 'Apple M4, 24GB RAM, CPU-only', color: colors.primary },
+    { label: 'Compute', value: 'Apple M4 / CUDA GPU (auto-detected)', color: colors.primary },
   ]
 
   return (
