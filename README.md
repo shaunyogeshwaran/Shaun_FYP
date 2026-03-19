@@ -43,19 +43,37 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
    # Edit .env and add your Groq API key (free at https://console.groq.com)
    ```
 
-## Running the Streamlit Demo
+## Running the Demo
+
+### Option A: React Frontend + FastAPI (recommended)
+
+```bash
+# Terminal 1 — start the backend
+python api.py
+
+# Terminal 2 — start the frontend
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000** (or the port shown in the terminal). The frontend has three pages:
+
+- **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, and animated verdict
+- **Explore** (`/explore`) — Batch-run 7 pre-configured queries across different knowledge domains and compare results in a table with aggregate stats
+- **How It Works** (`/about`) — Visual walkthrough of the 4-stage pipeline, threshold variant formulas (Tiered / Sqrt / Sigmoid), and technical stack reference
+
+### Option B: Streamlit Demo
 
 ```bash
 streamlit run app.py
 ```
 
-This launches an interactive web interface where you can:
-- Enter queries against a curated knowledge base
-- Adjust threshold parameters (pivot, strict, lenient) via sidebar sliders
-- View retrieval confidence, LLM-generated responses, and NLI verification results
-- See colour-coded verdicts (VERIFIED / HALLUCINATION)
+A simpler single-page interface with sidebar sliders and three-column results.
 
-The demo works in **offline mode** without an API key (uses mock LLM responses; RAG and verification still function).
+### Offline Mode
+
+Both interfaces work **without an API key** (uses mock LLM responses; RAG and NLI verification still function).
 
 ## Running Experiments
 
@@ -101,6 +119,7 @@ python analyze.py --split test --realistic
 ```
 Shaun_FYP/
 ├── app.py              # Streamlit demo application
+├── api.py              # FastAPI backend (REST API for React frontend)
 ├── engine.py           # Core AFLHREngine class (embedding, retrieval, NLI, verdict)
 ├── config.py           # Configuration, model IDs, thresholds, knowledge base
 ├── dataset.py          # HaluEval dataset loader with dev/test splitting
@@ -111,6 +130,15 @@ Shaun_FYP/
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Environment variable template
 ├── .gitignore          # Git ignore rules
+├── frontend/           # React + Vite frontend
+│   ├── src/
+│   │   ├── components/ # Reusable UI components (CircularGauge, VerdictStamp, etc.)
+│   │   ├── pages/      # Page views (VerifyPage, ExplorePage, AboutPage)
+│   │   ├── styles/     # Design system (theme.js, global.css)
+│   │   ├── App.jsx     # Root component with routing
+│   │   └── main.jsx    # Entry point
+│   ├── package.json    # Node dependencies (React, Framer Motion, Recharts)
+│   └── vite.config.js  # Vite config (dev proxy to FastAPI)
 ├── data/               # Cached datasets (generated at runtime)
 └── results/            # Experiment outputs (generated at runtime)
     └── figures/        # Generated plots and visualisations
