@@ -1,6 +1,12 @@
 """
 AFLHR Lite - Core Engine Module
 Handles retrieval, generation, and verification logic.
+
+v2 improvements:
+  - Sliding-window NLI (fixes 512-token truncation for long premises)
+  - Sentence-level claim decomposition (addresses semantic illusion)
+  - NLI temperature scaling / calibration
+  - Optional BGE embedding upgrade (ablation)
 """
 
 import os
@@ -10,6 +16,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+import json
 import math
 import time
 
@@ -22,12 +29,16 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import (
     EMBEDDING_MODEL,
+    EMBEDDING_MODEL_V2,
     VERIFIER_MODEL,
     GENERATOR_MODEL,
     GROQ_API_KEY,
     KNOWLEDGE_BASE,
     GENERATION_SYSTEM_PROMPT,
     OFFLINE_MOCK_RESPONSE,
+    NLI_MAX_PREMISE_TOKENS,
+    NLI_STRIDE_TOKENS,
+    CALIBRATION_TEMP_PATH,
 )
 
 
@@ -38,20 +49,39 @@ class AFLHREngine:
     Two-layer pipeline:
     1. RAG Layer: Retrieval with confidence scoring
     2. Verification Layer: NLI-based verification with dynamic thresholds
+
+    v2 feature flags (set in __init__):
+      use_windowed_nli  - sliding-window NLI for long premises
+      use_decomposition - sentence-level claim decomposition
+      use_calibration   - temperature-scaled NLI logits
+      use_bge_embeddings - BAAI/bge-small-en-v1.5 instead of MiniLM
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        use_windowed_nli: bool = False,
+        use_decomposition: bool = False,
+        use_calibration: bool = False,
+        use_bge_embeddings: bool = False,
+    ):
         """Initialize models and build the knowledge base index."""
         print("Initializing AFLHR Engine...")
+
+        # Store feature flags
+        self.use_windowed_nli = use_windowed_nli
+        self.use_decomposition = use_decomposition
+        self.use_calibration = use_calibration
+        self.use_bge_embeddings = use_bge_embeddings
 
         # Use CPU to avoid MPS segfaults
         self.device = torch.device("cpu")
         print("Using CPU for all models (stable mode)")
 
-        # Load embedding model using transformers directly (avoids sentence-transformers segfault)
-        print(f"Loading embedding model: {EMBEDDING_MODEL}")
-        self.embed_tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL)
-        self.embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL)
+        # Select embedding model
+        embed_model_id = EMBEDDING_MODEL_V2 if use_bge_embeddings else EMBEDDING_MODEL
+        print(f"Loading embedding model: {embed_model_id}")
+        self.embed_tokenizer = AutoTokenizer.from_pretrained(embed_model_id)
+        self.embed_model = AutoModel.from_pretrained(embed_model_id)
         self.embed_model.to(self.device)
         self.embed_model.eval()
 
@@ -61,6 +91,11 @@ class AFLHREngine:
         self.verifier_model = AutoModelForSequenceClassification.from_pretrained(VERIFIER_MODEL)
         self.verifier_model.to(self.device)
         self.verifier_model.eval()
+
+        # Load calibration temperature
+        self.calibration_T = 1.0
+        if use_calibration:
+            self._load_calibration()
 
         # Initialize LLM client (Groq)
         if GROQ_API_KEY:
@@ -79,18 +114,43 @@ class AFLHREngine:
         self.faiss_index = None
         self.ingest_knowledge_base()
 
-        print("AFLHR Engine initialized successfully!")
+        flags = []
+        if use_windowed_nli:
+            flags.append("windowed_nli")
+        if use_decomposition:
+            flags.append("decomposition")
+        if use_calibration:
+            flags.append(f"calibration(T={self.calibration_T:.3f})")
+        if use_bge_embeddings:
+            flags.append("bge_embeddings")
+        flag_str = ", ".join(flags) if flags else "v1 (baseline)"
+        print(f"AFLHR Engine initialized [{flag_str}]")
 
-    def _encode(self, texts: list) -> np.ndarray:
+    def _load_calibration(self):
+        """Load temperature from calibration file."""
+        if os.path.exists(CALIBRATION_TEMP_PATH):
+            with open(CALIBRATION_TEMP_PATH) as f:
+                data = json.load(f)
+            self.calibration_T = float(data["temperature"])
+            print(f"Loaded calibration temperature: {self.calibration_T:.4f}")
+        else:
+            print(f"Warning: calibration file not found at {CALIBRATION_TEMP_PATH}, using T=1.0")
+
+    def _encode(self, texts: list, is_query: bool = False) -> np.ndarray:
         """
         Generate embeddings using mean pooling (replicates SentenceTransformer behavior).
 
         Args:
             texts: List of strings to encode
+            is_query: If True and using BGE, prepend instruction prefix
 
         Returns:
             Normalized embeddings as numpy array
         """
+        # BGE models require instruction prefix for queries
+        if self.use_bge_embeddings and is_query:
+            texts = [f"Represent this sentence for searching relevant passages: {t}" for t in texts]
+
         # Tokenize
         inputs = self.embed_tokenizer(
             texts,
@@ -143,7 +203,7 @@ class AFLHREngine:
             dict with 'context' (concatenated docs), 'retrieval_score', and 'documents'
         """
         # Embed the query
-        query_embedding = self._encode([query])
+        query_embedding = self._encode([query], is_query=True)
 
         # Search FAISS
         scores, indices = self.faiss_index.search(query_embedding, k)
@@ -194,20 +254,16 @@ class AFLHREngine:
             print(f"Generation error: {e}")
             return f"Error generating response: {str(e)}"
 
-    def verify(self, premise: str, hypothesis: str) -> float:
-        """
-        Verify the hypothesis against the premise using NLI.
+    # ==================================================================
+    # NLI Verification (v1 and v2)
+    # ==================================================================
 
-        Args:
-            premise: The retrieved context (evidence)
-            hypothesis: The generated response (claim to verify)
+    def _nli_logits(self, premise: str, hypothesis: str) -> torch.Tensor:
+        """Run NLI and return raw logits (before softmax).
 
         Returns:
-            Entailment probability (0-1)
+            1-D tensor of shape (3,): [contradiction, neutral, entailment]
         """
-        # Tokenize with truncation to prevent overflow
-        # Use "longest_first" to handle edge cases where hypothesis alone
-        # exceeds max_length (which causes "only_first" to fail).
         inputs = self.tokenizer(
             premise,
             hypothesis,
@@ -216,23 +272,161 @@ class AFLHREngine:
             max_length=512,
             padding=True
         )
-
-        # Move to device
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        # Run inference
         with torch.no_grad():
             outputs = self.verifier_model(**inputs)
-            logits = outputs.logits
+        return outputs.logits[0]  # shape (3,)
 
-            # Apply softmax to get probabilities
-            # RoBERTa-MNLI output order: [contradiction, neutral, entailment]
-            probabilities = torch.softmax(logits, dim=1)
+    def _logits_to_entailment(self, logits: torch.Tensor) -> float:
+        """Convert 3-class logits to entailment probability, with optional calibration."""
+        if self.use_calibration and self.calibration_T != 1.0:
+            logits = logits / self.calibration_T
+        probs = torch.softmax(logits, dim=0)
+        return probs[2].item()  # entailment index
 
-            # Extract entailment probability (index 2)
-            entailment_prob = probabilities[0][2].item()
+    def verify(self, premise: str, hypothesis: str) -> float:
+        """
+        Verify the hypothesis against the premise using NLI (single-pass).
 
-        return round(entailment_prob, 4)
+        Args:
+            premise: The retrieved context (evidence)
+            hypothesis: The generated response (claim to verify)
+
+        Returns:
+            Entailment probability (0-1)
+        """
+        logits = self._nli_logits(premise, hypothesis)
+        return round(self._logits_to_entailment(logits), 4)
+
+    def verify_raw_logits(self, premise: str, hypothesis: str) -> list:
+        """Return raw 3-class logits (for calibration data collection)."""
+        logits = self._nli_logits(premise, hypothesis)
+        return logits.cpu().tolist()
+
+    # ------------------------------------------------------------------
+    # 1A. Sliding-Window NLI
+    # ------------------------------------------------------------------
+
+    def verify_windowed(
+        self,
+        premise: str,
+        hypothesis: str,
+        max_premise_tokens: int = None,
+        stride: int = None,
+    ) -> dict:
+        """Sliding-window NLI for long premises.
+
+        Tokenizes premise alone; if it fits within (512 - hypothesis_tokens),
+        falls back to single-pass verify(). Otherwise splits premise tokens
+        into overlapping windows and returns max entailment score.
+
+        Returns:
+            dict with 'score' (max entailment), 'n_windows', 'method'
+        """
+        if max_premise_tokens is None:
+            max_premise_tokens = NLI_MAX_PREMISE_TOKENS
+        if stride is None:
+            stride = NLI_STRIDE_TOKENS
+
+        # Tokenize premise and hypothesis separately to check lengths
+        premise_ids = self.tokenizer.encode(premise, add_special_tokens=False)
+        hypothesis_ids = self.tokenizer.encode(hypothesis, add_special_tokens=False)
+
+        # RoBERTa uses: <s> premise </s></s> hypothesis </s> = 4 special tokens
+        available_for_premise = 512 - len(hypothesis_ids) - 4
+
+        if len(premise_ids) <= available_for_premise:
+            # Single-pass is fine
+            score = self.verify(premise, hypothesis)
+            return {"score": score, "n_windows": 1, "method": "single_pass"}
+
+        # Split premise into overlapping windows
+        window_scores = []
+        start = 0
+        while start < len(premise_ids):
+            end = min(start + max_premise_tokens, len(premise_ids))
+            window_ids = premise_ids[start:end]
+
+            # Decode window back to text
+            window_text = self.tokenizer.decode(window_ids, skip_special_tokens=True)
+
+            logits = self._nli_logits(window_text, hypothesis)
+            score = self._logits_to_entailment(logits)
+            window_scores.append(score)
+
+            if end >= len(premise_ids):
+                break
+            start += stride
+
+        # Max aggregation: if any chunk entails, it's supported
+        max_score = max(window_scores)
+        return {
+            "score": round(max_score, 4),
+            "n_windows": len(window_scores),
+            "method": "windowed",
+        }
+
+    # ------------------------------------------------------------------
+    # 1B. Sentence-Level Claim Decomposition
+    # ------------------------------------------------------------------
+
+    def decompose_claims(self, text: str) -> list:
+        """Split text into individual claim sentences using NLTK."""
+        import nltk
+        try:
+            sentences = nltk.sent_tokenize(text)
+        except LookupError:
+            nltk.download("punkt_tab", quiet=True)
+            sentences = nltk.sent_tokenize(text)
+        # Filter out very short fragments (< 5 chars)
+        return [s.strip() for s in sentences if len(s.strip()) >= 5]
+
+    def verify_decomposed(self, premise: str, hypothesis: str) -> dict:
+        """Decompose hypothesis into sentences and verify each against premise.
+
+        Uses windowed NLI if use_windowed_nli is enabled, otherwise single-pass.
+        Aggregates with min (weakest-link: one bad claim = hallucination).
+
+        Returns:
+            dict with 'score' (min), 'mean_score', 'per_claim' list,
+            'n_claims', 'n_windows' (total across all claims)
+        """
+        claims = self.decompose_claims(hypothesis)
+
+        if not claims:
+            # Fallback: treat whole hypothesis as single claim
+            claims = [hypothesis]
+
+        per_claim = []
+        total_windows = 0
+
+        for claim in claims:
+            if self.use_windowed_nli:
+                result = self.verify_windowed(premise, claim)
+                score = result["score"]
+                total_windows += result["n_windows"]
+            else:
+                score = self.verify(premise, claim)
+                total_windows += 1
+
+            per_claim.append({"claim": claim, "score": score})
+
+        scores = [c["score"] for c in per_claim]
+        min_score = min(scores)
+        mean_score = sum(scores) / len(scores)
+
+        return {
+            "score": round(min_score, 4),
+            "mean_score": round(mean_score, 4),
+            "per_claim": per_claim,
+            "n_claims": len(claims),
+            "n_windows": total_windows,
+        }
+
+    # ==================================================================
+    # Verdict Calculation
+    # ==================================================================
 
     def calculate_verdict(
         self,
@@ -246,8 +440,8 @@ class AFLHREngine:
         Calculate verification verdict using confidence-weighted thresholds.
 
         The core innovation: threshold adapts based on retrieval confidence.
-        - Low retrieval confidence → Strict threshold (be skeptical)
-        - High retrieval confidence → Lenient threshold (trust evidence)
+        - Low retrieval confidence -> Strict threshold (be skeptical)
+        - High retrieval confidence -> Lenient threshold (trust evidence)
 
         Args:
             retrieval_score: FAISS similarity score (0-1)
@@ -262,11 +456,11 @@ class AFLHREngine:
         if retrieval_score < pivot:
             threshold = strict_threshold
             mode = "STRICT"
-            reasoning = "Low retrieval confidence → applying strict verification"
+            reasoning = "Low retrieval confidence -> applying strict verification"
         else:
             threshold = lenient_threshold
             mode = "LENIENT"
-            reasoning = "High retrieval confidence → trusting evidence quality"
+            reasoning = "High retrieval confidence -> trusting evidence quality"
 
         is_verified = nli_score >= threshold
 
@@ -343,7 +537,7 @@ class AFLHREngine:
 
         Returns a score in [0, 1] (converted from cosine range [-1, 1]).
         """
-        query_emb = self._encode([query])
+        query_emb = self._encode([query], is_query=True)
         knowledge_emb = self._encode([knowledge])
         raw_score = float(np.dot(query_emb[0], knowledge_emb[0]))
         return round((raw_score + 1) / 2, 4)
@@ -463,15 +657,46 @@ class AFLHREngine:
 
         Used by the evaluation harness to separate expensive model inference
         from fast threshold sweeping.
+
+        v2: also computes decomposed and windowed scores when flags are set.
         """
         start = time.perf_counter()
         retrieval_score = self.compute_retrieval_score(query, knowledge)
-        nli_score = self.verify(premise=knowledge, hypothesis=response)
+
+        # v1-style whole-response NLI (always computed for backward compat)
+        nli_score_whole = self.verify(premise=knowledge, hypothesis=response)
+
+        # v2: decomposed claim-level NLI
+        n_claims = 1
+        n_windows = 1
+        nli_mean_score = nli_score_whole
+        nli_method = "whole"
+
+        if self.use_decomposition:
+            decomp = self.verify_decomposed(premise=knowledge, hypothesis=response)
+            nli_score = decomp["score"]           # min over claims
+            nli_mean_score = decomp["mean_score"]
+            n_claims = decomp["n_claims"]
+            n_windows = decomp["n_windows"]
+            nli_method = "decomposed"
+        elif self.use_windowed_nli:
+            windowed = self.verify_windowed(premise=knowledge, hypothesis=response)
+            nli_score = windowed["score"]
+            n_windows = windowed["n_windows"]
+            nli_method = windowed["method"]
+        else:
+            nli_score = nli_score_whole
+
         elapsed = time.perf_counter() - start
 
         return {
             "retrieval_score": retrieval_score,
             "nli_score": nli_score,
+            "nli_score_whole": nli_score_whole,
+            "nli_mean_score": nli_mean_score,
+            "n_claims": n_claims,
+            "n_windows": n_windows,
+            "nli_method": nli_method,
             "latency_ms": round(elapsed * 1000, 2),
         }
 
@@ -515,7 +740,7 @@ class AFLHREngine:
         Returns:
             dict with context, retrieval_score, documents
         """
-        query_emb = self._encode([query])
+        query_emb = self._encode([query], is_query=True)
         scores, indices = index.search(query_emb, k)
 
         raw_score = float(scores[0][0])
