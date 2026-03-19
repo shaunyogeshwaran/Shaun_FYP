@@ -1,5 +1,5 @@
 /**
- * AFLHR Lite — "The Observatory" Design System
+ * AFLHR — "The Observatory" Design System
  * A scientific verification instrument aesthetic.
  */
 
