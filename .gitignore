@@ -46,6 +46,15 @@ streamlit_export*/
 # macOS
 .DS_Store
 
+# Word temp files
+~$*
+
+# Playwright
+.playwright-mcp/
+
+# Frontend build output
+frontend/dist/
+
 # Model cache (optional - uncomment if you want to exclude)
 # .cache/
 
