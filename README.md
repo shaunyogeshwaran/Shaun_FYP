@@ -4,7 +4,7 @@
 
 A two-layer verification pipeline that combines Retrieval-Augmented Generation (RAG) with Natural Language Inference (NLI) to detect hallucinations in LLM outputs. The core innovation is **Confidence-Weighted CONLI (Cw-CONLI)**: the NLI verification threshold adapts dynamically based on retrieval confidence, applying stricter scrutiny when evidence quality is low and more lenient thresholds when strong supporting evidence exists.
 
-**v2** extends the pipeline with sliding-window NLI, sentence-level claim decomposition, NLI temperature scaling, and a BGE embedding upgrade — addressing token truncation, semantic illusion, and uncalibrated NLI outputs.
+**v2** extends the pipeline with sliding-window NLI, sentence-level claim decomposition, and a BGE embedding upgrade — addressing token truncation and semantic illusion. (Temperature scaling was investigated but disabled: T=10.0 at optimizer boundary means NLI logits are not calibratable for this task.)
 
 ## Results
 
@@ -14,7 +14,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 | **QA Over-flagging** | 13.6% | **13.8%** (C3 Tiered) |
 | **Summarisation** | Broken (99%+ FPR) | **F1 = 0.656** (fixed) |
 | **C3 vs C2 significant?** | No (p = 0.25) | **Yes (p = 0.000003)** |
-| **Calibration** | None | T = 10.0 (NLL -43.7%) |
+| **Calibration** | None | T = 10.0 at boundary (disabled) |
 
 **Key finding:** Cw-CONLI significantly outperforms static CONLI (McNemar's p = 3 x 10^-6). C3 Tiered reduces QA over-flagging by 6.2 percentage points (13.8% vs 20.0%). Summarisation, previously broken due to 512-token truncation, is now functional with sliding-window NLI.
 
@@ -29,8 +29,8 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 - Python 3.10+
 - Node.js 18+ (for frontend)
-- 24 GB RAM recommended (models loaded on CPU)
-- No GPU required (all inference runs on CPU; Colab notebook provided for faster runs)
+- 24 GB RAM recommended
+- GPU auto-detected (CUDA used when available; falls back to CPU on Mac/other). Colab notebook provided for faster GPU runs
 
 ## Installation
 
@@ -82,7 +82,6 @@ Open **http://localhost:3000** (or the port shown in the terminal). The frontend
 The **v2 Mode** toggle in the control panel enables:
 - **Sliding-window NLI** — splits long premises into overlapping 400-token windows so summarisation documents are fully evaluated
 - **Sentence-level claim decomposition** — verifies each sentence independently, takes the minimum score (weakest-link)
-- **Temperature-scaled calibration** — divides NLI logits by learned temperature T before softmax
 - **BGE embeddings** — upgrades to BAAI/bge-small-en-v1.5 for higher retrieval fidelity
 
 When v2 is active, the verification column shows a per-claim score breakdown highlighting the weakest claim.
@@ -118,7 +117,7 @@ v2 adds four improvements over the baseline:
 |---|---|---|
 | Sliding-window NLI | RoBERTa 512-token limit truncates long premises | Split premise into overlapping windows, take max entailment |
 | Claim decomposition | Whole-response NLI washes out single altered facts | Split hypothesis into sentences, take min score (weakest-link) |
-| Temperature scaling | Raw softmax outputs are uncalibrated (T=10.0 found) | Fit temperature T on dev logits (Guo et al. 2017) |
+| Temperature scaling | Raw softmax outputs are uncalibrated | Investigated (Guo et al. 2017); T=10.0 at boundary — disabled, NLI logits not calibratable for this task |
 | Embedding upgrade | all-MiniLM-L6-v2 is outdated (2021, 384-dim) | BAAI/bge-small-en-v1.5 (same dim, better quality) |
 
 **Automated pipeline** (recommended):
@@ -129,7 +128,7 @@ python run_v2.py --limit 50        # smoke test (~minutes)
 python run_v2.py --skip-calibrate  # reuse existing calibration
 ```
 
-**Google Colab** (recommended for speed): Open `run_v2_colab.ipynb` in Colab with a T4 GPU runtime for ~4.5 hour total runtime.
+**Google Colab** (recommended for speed): Open `colab_v2_pipeline.ipynb` in Colab with a T4 GPU runtime for ~3-6 hour total runtime.
 
 **Manual step-by-step:**
 
@@ -138,7 +137,7 @@ python calibrate.py --split dev                          # calibrate NLI tempera
 python evaluate.py --precompute --split dev --version v2  # pre-compute v2 scores
 python evaluate.py --precompute --split test --version v2
 python tune.py --split dev --version v2                   # tune with v2 grid ranges
-python evaluate.py --condition C3 --split test --version v2 --params '{"method":"tiered","pivot":0.8,"T_strict":0.36,"T_lenient":0.355}'
+python evaluate.py --condition C3 --split test --version v2
 python analyze.py --split test --version v2               # generate figures
 ```
 
@@ -164,8 +163,9 @@ Shaun_FYP/
 ├── analyze.py          # Results analysis, plots, McNemar's test
 ├── calibrate.py        # NLI temperature scaling calibration
 ├── run_v2.py           # Automated v2 experiment pipeline
-├── run_v2_colab.ipynb  # Colab notebook for GPU-accelerated experiments
-├── requirements.txt    # Python dependencies
+├── colab_v2_pipeline.ipynb  # Colab notebook for GPU-accelerated experiments
+├── requirements.txt        # Python dependencies (loose pins)
+├── requirements-lock.txt   # Pinned dependencies for exact reproducibility
 ├── .env.example        # Environment variable template
 ├── frontend/           # React + Vite frontend
 │   ├── src/
@@ -187,7 +187,7 @@ Shaun_FYP/
 | Component | Model (v1) | Model (v2) | Purpose |
 |-----------|------------|------------|---------|
 | Embeddings | `all-MiniLM-L6-v2` | `BAAI/bge-small-en-v1.5` | Semantic similarity for retrieval |
-| NLI Verifier | `RoBERTa-large-MNLI` | `RoBERTa-large-MNLI` + temp. scaling (T=10) | Entailment scoring for verification |
+| NLI Verifier | `RoBERTa-large-MNLI` | `RoBERTa-large-MNLI` | Entailment scoring for verification |
 | LLM Generator | `Llama-3.1-8B-Instant` (via Groq) | same | Response generation |
 
 ## v2 Detailed Results
