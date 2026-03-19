@@ -430,7 +430,7 @@ export default function AboutPage() {
         color: colors.textMuted,
         lineHeight: 1.8,
       }}>
-        <p>AFLHR Lite — Confidence-Weighted CONLI for Hallucination Detection</p>
+        <p>AFLHR — Confidence-Weighted CONLI for Hallucination Detection</p>
         <p>BSc Computer Science Final Year Project</p>
         <p style={{ color: colors.primary }}>Shaun Yogeshwaran · University of Westminster / IIT</p>
       </div>
