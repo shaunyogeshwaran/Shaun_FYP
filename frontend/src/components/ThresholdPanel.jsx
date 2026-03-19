@@ -20,7 +20,13 @@ function Slider({ label, value, onChange, min = 0, max = 1, step = 0.01, tooltip
   )
 }
 
-export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, lenient, setLenient, offline, setOffline }) {
+export default function ThresholdPanel({
+  pivot, setPivot,
+  strict, setStrict,
+  lenient, setLenient,
+  offline, setOffline,
+  v2Mode = false, setV2Mode = () => {},
+}) {
   const [open, setOpen] = useState(true)
   const { colors } = useTheme()
 
@@ -69,7 +75,7 @@ export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, len
           >
             <div style={{ padding: '0 20px 20px', borderTop: `1px solid ${colors.border}`, paddingTop: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 24 }}>
-                <Slider label="Pivot Point" value={pivot} onChange={setPivot} tooltip="Retrieval scores below this → STRICT verification mode" color={colors.primary} step={0.05} />
+                <Slider label="Pivot Point" value={pivot} onChange={setPivot} tooltip="Retrieval scores below this -> STRICT verification mode" color={colors.primary} step={0.05} />
                 <Slider label="Strict Threshold" value={strict} onChange={setStrict} tooltip="Applied when retrieval confidence is LOW (below pivot)" color={colors.hallucination} step={0.01} />
                 <Slider label="Lenient Threshold" value={lenient} onChange={setLenient} tooltip="Applied when retrieval confidence is HIGH (above pivot)" color={colors.verified} step={0.01} />
               </div>
@@ -78,14 +84,27 @@ export default function ThresholdPanel({ pivot, setPivot, strict, setStrict, len
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.border}`,
               }}>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                  fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary,
-                }}>
-                  <input type="checkbox" checked={offline} onChange={e => setOffline(e.target.checked)} />
-                  Offline Mode
-                  <span style={{ color: colors.textMuted, fontSize: 11 }}>— mock LLM, real RAG + NLI</span>
-                </label>
+                <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                    fontFamily: fonts.body, fontSize: 12, color: colors.textSecondary,
+                  }}>
+                    <input type="checkbox" checked={offline} onChange={e => setOffline(e.target.checked)} />
+                    Offline Mode
+                    <span style={{ color: colors.textMuted, fontSize: 11 }}>— mock LLM, real RAG + NLI</span>
+                  </label>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                    fontFamily: fonts.body, fontSize: 12,
+                    color: v2Mode ? colors.primary : colors.textSecondary,
+                    transition: 'color 0.2s',
+                  }}>
+                    <input type="checkbox" checked={v2Mode} onChange={e => setV2Mode(e.target.checked)} />
+                    v2 Mode
+                    <span style={{ color: colors.textMuted, fontSize: 11 }}>— windowed NLI + claim decomposition + calibration</span>
+                  </label>
+                </div>
+
                 <div style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted, display: 'flex', gap: 16 }}>
                   <span>P={pivot.toFixed(2)}</span>
                   <span>T<sub>s</sub>={strict.toFixed(2)}</span>
