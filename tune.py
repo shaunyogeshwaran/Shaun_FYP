@@ -25,8 +25,35 @@ from config import (
     GRID_C3_T_LENIENT,
     GRID_C3_CONT_T_STRICT,
     GRID_C3_CONT_T_LENIENT,
+    GRID_V2_C2_T_STATIC,
+    GRID_V2_C3_PIVOT,
+    GRID_V2_C3_T_STRICT,
+    GRID_V2_C3_T_LENIENT,
+    GRID_V2_C3_CONT_T_STRICT,
+    GRID_V2_C3_CONT_T_LENIENT,
 )
 from evaluate import load_precomputed, apply_condition, compute_metrics
+
+
+def get_grid_config(version="v1"):
+    """Return the appropriate grid search ranges for v1 or v2."""
+    if version == "v2":
+        return {
+            "c2": GRID_V2_C2_T_STATIC,
+            "pivot": GRID_V2_C3_PIVOT,
+            "strict": GRID_V2_C3_T_STRICT,
+            "lenient": GRID_V2_C3_T_LENIENT,
+            "cont_strict": GRID_V2_C3_CONT_T_STRICT,
+            "cont_lenient": GRID_V2_C3_CONT_T_LENIENT,
+        }
+    return {
+        "c2": GRID_C2_T_STATIC,
+        "pivot": GRID_C3_PIVOT,
+        "strict": GRID_C3_T_STRICT,
+        "lenient": GRID_C3_T_LENIENT,
+        "cont_strict": GRID_C3_CONT_T_STRICT,
+        "cont_lenient": GRID_C3_CONT_T_LENIENT,
+    }
 
 
 def make_range(cfg):
@@ -47,13 +74,14 @@ def _labels(scores):
 # C2 tuning
 # ---------------------------------------------------------------------------
 
-def tune_c2(scores, nli_key="nli_score"):
+def tune_c2(scores, nli_key="nli_score", grid=None):
     """Sweep T_static to maximise F1."""
     labels = _labels(scores)
     best_f1, best_params = -1, None
     log = []
 
-    for t in make_range(GRID_C2_T_STATIC):
+    c2_grid = grid["c2"] if grid else GRID_C2_T_STATIC
+    for t in make_range(c2_grid):
         params = {"T_static": t}
         preds = apply_condition(scores, "C2", params, nli_key=nli_key)
         m = compute_metrics(labels, preds)
@@ -69,15 +97,15 @@ def tune_c2(scores, nli_key="nli_score"):
 # C3 tiered tuning
 # ---------------------------------------------------------------------------
 
-def tune_c3_tiered(scores, nli_key="nli_score"):
+def tune_c3_tiered(scores, nli_key="nli_score", grid=None):
     """Sweep pivot, T_strict, T_lenient to maximise F1."""
     labels = _labels(scores)
     best_f1, best_params = -1, None
     log = []
 
-    pivots = make_range(GRID_C3_PIVOT)
-    t_stricts = make_range(GRID_C3_T_STRICT)
-    t_lenients = make_range(GRID_C3_T_LENIENT)
+    pivots = make_range(grid["pivot"] if grid else GRID_C3_PIVOT)
+    t_stricts = make_range(grid["strict"] if grid else GRID_C3_T_STRICT)
+    t_lenients = make_range(grid["lenient"] if grid else GRID_C3_T_LENIENT)
 
     total = len(pivots) * len(t_stricts) * len(t_lenients)
     print(f"  C3 tiered: up to {total} configurations")
@@ -102,14 +130,14 @@ def tune_c3_tiered(scores, nli_key="nli_score"):
 # C3 continuous tuning (sqrt / sigmoid)
 # ---------------------------------------------------------------------------
 
-def tune_c3_continuous(scores, method="sqrt", nli_key="nli_score"):
+def tune_c3_continuous(scores, method="sqrt", nli_key="nli_score", grid=None):
     """Sweep T_strict, T_lenient for continuous weighting."""
     labels = _labels(scores)
     best_f1, best_params = -1, None
     log = []
 
-    t_stricts = make_range(GRID_C3_CONT_T_STRICT)
-    t_lenients = make_range(GRID_C3_CONT_T_LENIENT)
+    t_stricts = make_range(grid["cont_strict"] if grid else GRID_C3_CONT_T_STRICT)
+    t_lenients = make_range(grid["cont_lenient"] if grid else GRID_C3_CONT_T_LENIENT)
 
     total = len(t_stricts) * len(t_lenients)
     print(f"  C3 {method}: up to {total} configurations")
@@ -162,14 +190,15 @@ def main():
         scores = [s for s in scores if s["task"] == args.task]
 
     nli_key = args.nli_key
+    grid = get_grid_config(args.version)
     print(f"Tuning on {len(scores)} samples "
-          f"({args.split} split, task={args.task or 'all'}, nli_key={nli_key})\n")
+          f"({args.split} split, task={args.task or 'all'}, nli_key={nli_key}, grid={args.version})\n")
 
     all_results = {}
 
     # --- C2 ---
     print("--- Tuning C2 (fixed threshold) ---")
-    c2_params, c2_f1, c2_log = tune_c2(scores, nli_key=nli_key)
+    c2_params, c2_f1, c2_log = tune_c2(scores, nli_key=nli_key, grid=grid)
     print(f"  Best C2: F1={c2_f1:.4f}  params={c2_params}\n")
     all_results["C2"] = {
         "best_params": c2_params, "best_f1": c2_f1, "log": c2_log,
@@ -177,7 +206,7 @@ def main():
 
     # --- C3 tiered ---
     print("--- Tuning C3 tiered ---")
-    c3t_params, c3t_f1, c3t_log = tune_c3_tiered(scores, nli_key=nli_key)
+    c3t_params, c3t_f1, c3t_log = tune_c3_tiered(scores, nli_key=nli_key, grid=grid)
     print(f"  Best C3 tiered: F1={c3t_f1:.4f}  params={c3t_params}\n")
     all_results["C3_tiered"] = {
         "best_params": c3t_params, "best_f1": c3t_f1, "log": c3t_log,
@@ -186,7 +215,7 @@ def main():
     # --- C3 sqrt ---
     print("--- Tuning C3 continuous (sqrt) ---")
     c3s_params, c3s_f1, c3s_log = tune_c3_continuous(scores, method="sqrt",
-                                                      nli_key=nli_key)
+                                                      nli_key=nli_key, grid=grid)
     print(f"  Best C3 sqrt: F1={c3s_f1:.4f}  params={c3s_params}\n")
     all_results["C3_sqrt"] = {
         "best_params": c3s_params, "best_f1": c3s_f1, "log": c3s_log,
@@ -195,7 +224,7 @@ def main():
     # --- C3 sigmoid ---
     print("--- Tuning C3 continuous (sigmoid) ---")
     c3g_params, c3g_f1, c3g_log = tune_c3_continuous(scores, method="sigmoid",
-                                                      nli_key=nli_key)
+                                                      nli_key=nli_key, grid=grid)
     print(f"  Best C3 sigmoid: F1={c3g_f1:.4f}  params={c3g_params}\n")
     all_results["C3_sigmoid"] = {
         "best_params": c3g_params, "best_f1": c3g_f1, "log": c3g_log,
