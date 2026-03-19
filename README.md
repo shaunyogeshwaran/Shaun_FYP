@@ -16,6 +16,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 ## Prerequisites
 
 - Python 3.10+
+- Node.js 18+ (for frontend)
 - 24 GB RAM recommended (models loaded on CPU)
 - No GPU required (all inference runs on CPU)
 
@@ -37,6 +38,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
+   cd frontend && npm install && cd ..
    ```
 
 4. **Set up environment variables:**
@@ -44,38 +46,34 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
    cp .env.example .env
    # Edit .env and add your Groq API key (free at https://console.groq.com)
    ```
+   Without a Groq API key the demo still works in offline mode (mock LLM responses; RAG + NLI verification still function).
 
 ## Running the Demo
 
-### Option A: React Frontend + FastAPI (recommended)
-
 ```bash
-# Terminal 1 — start the backend
+# Terminal 1 — start the FastAPI backend
 python api.py
 
-# Terminal 2 — start the frontend
+# Terminal 2 — start the React frontend
 cd frontend
-npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** (or the port shown in the terminal). The frontend has three pages:
+Open **http://localhost:3001** (or the port shown in the terminal). The frontend has three pages:
 
-- **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, and animated verdict
-- **Explore** (`/explore`) — Batch-run 7 pre-configured queries across different knowledge domains and compare results in a table with aggregate stats
-- **How It Works** (`/about`) — Visual walkthrough of the 4-stage pipeline, threshold variant formulas (Tiered / Sqrt / Sigmoid), and technical stack reference
+- **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, toggle **v2 Mode**, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, per-claim breakdown (v2), and animated verdict
+- **Explore** (`/explore`) — Batch-run 7 pre-configured queries across different knowledge domains and compare results in a table with aggregate stats (supports v1/v2 toggle)
+- **How It Works** (`/about`) — Visual walkthrough of the 4-stage pipeline, v2 improvements, threshold variant formulas, and technical stack reference
 
-### Option B: Streamlit Demo
+### v2 Mode
 
-```bash
-streamlit run app.py
-```
+The **v2 Mode** toggle in the control panel enables:
+- **Sliding-window NLI** — splits long premises into overlapping 400-token windows so summarisation documents are fully evaluated
+- **Sentence-level claim decomposition** — verifies each sentence independently, takes the minimum score (weakest-link)
+- **Temperature-scaled calibration** — divides NLI logits by a learned temperature before softmax
+- **BGE embeddings** — upgrades to BAAI/bge-small-en-v1.5 for higher retrieval fidelity
 
-A simpler single-page interface with sidebar sliders and three-column results.
-
-### Offline Mode
-
-Both interfaces work **without an API key** (uses mock LLM responses; RAG and NLI verification still function).
+When v2 is active, the verification column shows a per-claim score breakdown highlighting the weakest claim.
 
 ## Running Experiments
 
@@ -173,8 +171,7 @@ python analyze.py --split test --realistic
 
 ```
 Shaun_FYP/
-├── app.py              # Streamlit demo application
-├── api.py              # FastAPI backend (REST API for React frontend)
+├── api.py              # FastAPI backend (v1 + v2 engine support)
 ├── engine.py           # Core AFLHREngine class (embedding, retrieval, NLI, verdict)
 ├── config.py           # Configuration, model IDs, thresholds, knowledge base
 ├── dataset.py          # HaluEval dataset loader with dev/test splitting
@@ -189,8 +186,8 @@ Shaun_FYP/
 ├── .gitignore          # Git ignore rules
 ├── frontend/           # React + Vite frontend
 │   ├── src/
-│   │   ├── components/ # Reusable UI components (CircularGauge, VerdictStamp, etc.)
-│   │   ├── pages/      # Page views (VerifyPage, ExplorePage, AboutPage)
+│   │   ├── components/ # CircularGauge, VerdictStamp, ThresholdPanel, ClaimBreakdown, etc.
+│   │   ├── pages/      # VerifyPage, ExplorePage, AboutPage
 │   │   ├── styles/     # Design system (theme.js, global.css)
 │   │   ├── App.jsx     # Root component with routing
 │   │   └── main.jsx    # Entry point
