@@ -124,16 +124,16 @@ GRID_C3_CONT_T_STRICT = {"min": 0.85, "max": 0.99, "step": 0.02}
 GRID_C3_CONT_T_LENIENT = {"min": 0.50, "max": 0.85, "step": 0.05}
 
 # =============================================================================
-# Grid Search Ranges (v2 — calibrated NLI scores compressed to ~0.22-0.48)
+# Grid Search Ranges (v2 — uncalibrated, wider sweep to find optimal range)
 # =============================================================================
-GRID_V2_C2_T_STATIC = {"min": 0.28, "max": 0.42, "step": 0.005}
+GRID_V2_C2_T_STATIC = {"min": 0.10, "max": 0.99, "step": 0.01}
 
-GRID_V2_C3_PIVOT = {"min": 0.50, "max": 0.80, "step": 0.05}
-GRID_V2_C3_T_STRICT = {"min": 0.35, "max": 0.42, "step": 0.005}
-GRID_V2_C3_T_LENIENT = {"min": 0.28, "max": 0.36, "step": 0.005}
+GRID_V2_C3_PIVOT = {"min": 0.50, "max": 0.90, "step": 0.05}
+GRID_V2_C3_T_STRICT = {"min": 0.20, "max": 0.99, "step": 0.02}
+GRID_V2_C3_T_LENIENT = {"min": 0.10, "max": 0.85, "step": 0.05}
 
-GRID_V2_C3_CONT_T_STRICT = {"min": 0.35, "max": 0.42, "step": 0.005}
-GRID_V2_C3_CONT_T_LENIENT = {"min": 0.28, "max": 0.36, "step": 0.005}
+GRID_V2_C3_CONT_T_STRICT = {"min": 0.20, "max": 0.99, "step": 0.02}
+GRID_V2_C3_CONT_T_LENIENT = {"min": 0.10, "max": 0.85, "step": 0.05}
 
 # =============================================================================
 # Sliding-Window NLI Configuration

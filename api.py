@@ -74,11 +74,11 @@ def get_v2_engine():
         return engine_v2
     with _v2_lock:
         if engine_v2 is None:
-            print("Loading AFLHR Engine (v2: windowed + decomposition + calibration + BGE)...")
+            print("Loading AFLHR Engine (v2: windowed + decomposition + BGE)...")
             engine_v2 = AFLHREngine(
                 use_windowed_nli=True,
                 use_decomposition=True,
-                use_calibration=True,
+                use_calibration=False,  # T=10 at boundary — calibration hurts
                 use_bge_embeddings=True,
             )
             print("Engine v2 ready.")

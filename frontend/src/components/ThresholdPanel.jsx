@@ -101,7 +101,7 @@ export default function ThresholdPanel({
                   }}>
                     <input type="checkbox" checked={v2Mode} onChange={e => setV2Mode(e.target.checked)} />
                     v2 Mode
-                    <span style={{ color: colors.textMuted, fontSize: 11 }}>— windowed NLI + claim decomposition + calibration</span>
+                    <span style={{ color: colors.textMuted, fontSize: 11 }}>— windowed NLI + claim decomposition + BGE embeddings</span>
                   </label>
                 </div>
 
