@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { ThemeProvider } from './ThemeContext'
 import Header from './components/Header'
 import VerifyPage from './pages/VerifyPage'
 import ExplorePage from './pages/ExplorePage'
 import AboutPage from './pages/AboutPage'
 import './styles/global.css'
 
-const API = ''  // proxied via vite
+const API = ''
 
 export default function App() {
   const [health, setHealth] = useState(null)
@@ -24,13 +25,15 @@ export default function App() {
   }, [])
 
   return (
-    <BrowserRouter>
-      <Header health={health} />
-      <Routes>
-        <Route path="/" element={<VerifyPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/about" element={<AboutPage />} />
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Header health={health} />
+        <Routes>
+          <Route path="/" element={<VerifyPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/about" element={<AboutPage />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
