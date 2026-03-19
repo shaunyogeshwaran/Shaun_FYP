@@ -45,8 +45,6 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Running the Demo
 
-### Option A: React Frontend + FastAPI (recommended)
-
 ```bash
 # Terminal 1 — start the backend
 python api.py
@@ -59,21 +57,15 @@ npm run dev
 
 Open **http://localhost:3000** (or the port shown in the terminal). The frontend has three pages:
 
-- **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, and animated verdict
+- **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, toggle v2 mode, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, per-claim breakdown (v2), and animated verdict
 - **Explore** (`/explore`) — Batch-run 7 pre-configured queries across different knowledge domains and compare results in a table with aggregate stats
-- **How It Works** (`/about`) — Visual walkthrough of the 4-stage pipeline, threshold variant formulas (Tiered / Sqrt / Sigmoid), and technical stack reference
+- **How It Works** (`/about`) — Visual walkthrough of the 4-stage pipeline, v2 improvements, threshold variant formulas, and technical stack reference
 
-### Option B: Streamlit Demo
-
-```bash
-streamlit run app.py
-```
-
-A simpler single-page interface with sidebar sliders and three-column results.
+The **v2 Mode** toggle in the control panel enables sliding-window NLI, sentence-level claim decomposition, temperature-scaled calibration, and BGE embeddings. The verification column shows a per-claim score breakdown when multiple claims are detected.
 
 ### Offline Mode
 
-Both interfaces work **without an API key** (uses mock LLM responses; RAG and NLI verification still function).
+The interface works **without an API key** (uses mock LLM responses; RAG and NLI verification still function).
 
 ## Running Experiments
 
@@ -118,8 +110,7 @@ python analyze.py --split test --realistic
 
 ```
 Shaun_FYP/
-├── app.py              # Streamlit demo application
-├── api.py              # FastAPI backend (REST API for React frontend)
+├── api.py              # FastAPI backend (REST API for React frontend, v1+v2)
 ├── engine.py           # Core AFLHREngine class (embedding, retrieval, NLI, verdict)
 ├── config.py           # Configuration, model IDs, thresholds, knowledge base
 ├── dataset.py          # HaluEval dataset loader with dev/test splitting

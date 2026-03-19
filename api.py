@@ -1,6 +1,7 @@
 """
 AFLHR Lite - FastAPI Backend
 REST API wrapping AFLHREngine for the React frontend.
+Supports both v1 (baseline) and v2 (decomposition + windowed NLI + calibration).
 """
 
 import os
@@ -12,7 +13,8 @@ os.environ["MKL_NUM_THREADS"] = "1"
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import threading
+from pydantic import BaseModel, Field
 from engine import AFLHREngine
 from config import (
     DEFAULT_PIVOT,
@@ -22,7 +24,7 @@ from config import (
     KNOWLEDGE_BASE,
 )
 
-app = FastAPI(title="AFLHR Lite API", version="1.0.0")
+app = FastAPI(title="AFLHR Lite API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,13 +39,13 @@ def root():
     return """
     <html><head><title>AFLHR Lite API</title></head>
     <body style="font-family:system-ui;max-width:600px;margin:60px auto;color:#333">
-    <h1>AFLHR Lite API</h1>
+    <h1>AFLHR Lite API v2</h1>
     <p>The backend is running. Open the frontend at
-    <a href="http://localhost:3001">http://localhost:3001</a></p>
+    <a href="http://localhost:3000">http://localhost:3000</a></p>
     <h3>Endpoints:</h3>
     <ul>
     <li><code>GET /api/health</code> — Health check</li>
-    <li><code>POST /api/verify</code> — Verify a query</li>
+    <li><code>POST /api/verify</code> — Verify a query (supports v2 mode)</li>
     <li><code>GET /api/knowledge-base</code> — Knowledge base info</li>
     <li><code>GET /docs</code> — Interactive API docs (Swagger)</li>
     </ul>
@@ -51,16 +53,36 @@ def root():
     """
 
 
-# Load engine once at startup
-engine: AFLHREngine | None = None
+# Engine instances — v1 loaded at startup, v2 loaded on first v2 request
+engine_v1: AFLHREngine | None = None
+engine_v2: AFLHREngine | None = None
+_v2_lock = threading.Lock()
 
 
 @app.on_event("startup")
 def startup():
-    global engine
-    print("Loading AFLHR Engine...")
-    engine = AFLHREngine()
-    print("Engine ready.")
+    global engine_v1
+    print("Loading AFLHR Engine (v1)...")
+    engine_v1 = AFLHREngine()
+    print("Engine v1 ready.")
+
+
+def get_v2_engine():
+    """Lazy-load v2 engine on first v2 request (thread-safe)."""
+    global engine_v2
+    if engine_v2 is not None:
+        return engine_v2
+    with _v2_lock:
+        if engine_v2 is None:
+            print("Loading AFLHR Engine (v2: windowed + decomposition + calibration + BGE)...")
+            engine_v2 = AFLHREngine(
+                use_windowed_nli=True,
+                use_decomposition=True,
+                use_calibration=True,
+                use_bge_embeddings=True,
+            )
+            print("Engine v2 ready.")
+    return engine_v2
 
 
 class VerifyRequest(BaseModel):
@@ -69,6 +91,12 @@ class VerifyRequest(BaseModel):
     strict_threshold: float = DEFAULT_STRICT_THRESHOLD
     lenient_threshold: float = DEFAULT_LENIENT_THRESHOLD
     offline_mode: bool = False
+    v2_mode: bool = False
+
+
+class ClaimScore(BaseModel):
+    claim: str
+    score: float
 
 
 class VerifyResponse(BaseModel):
@@ -77,10 +105,18 @@ class VerifyResponse(BaseModel):
     generation: str
     nli_score: float
     verdict: dict
+    # v2 fields
+    version: str = "v1"
+    nli_method: str = "whole"
+    n_claims: int = 1
+    per_claim: list[ClaimScore] = Field(default_factory=list)
 
 
 @app.post("/api/verify", response_model=VerifyResponse)
 def verify(req: VerifyRequest):
+    engine = get_v2_engine() if req.v2_mode else engine_v1
+
+    # Run the standard pipeline (retrieve + generate + single-pass verify + verdict)
     result = engine.run_pipeline(
         query=req.query,
         pivot=req.pivot,
@@ -88,12 +124,43 @@ def verify(req: VerifyRequest):
         lenient_threshold=req.lenient_threshold,
         offline_mode=req.offline_mode if GROQ_API_KEY else True,
     )
+
+    # v2: also run decomposed verification for the per-claim breakdown
+    nli_score = result["nli_score"]
+    nli_method = "whole"
+    n_claims = 1
+    per_claim = []
+
+    if req.v2_mode:
+        premise = result["retrieval"]["context"]
+        hypothesis = result["generation"]
+        decomp = engine.verify_decomposed(premise=premise, hypothesis=hypothesis)
+        nli_score = decomp["score"]
+        nli_method = "decomposed"
+        n_claims = decomp["n_claims"]
+        per_claim = [
+            ClaimScore(claim=c["claim"], score=round(c["score"], 4))
+            for c in decomp["per_claim"]
+        ]
+        # Recompute verdict with decomposed score
+        result["verdict"] = engine.calculate_verdict(
+            retrieval_score=result["retrieval"]["retrieval_score"],
+            nli_score=nli_score,
+            pivot=req.pivot,
+            strict_threshold=req.strict_threshold,
+            lenient_threshold=req.lenient_threshold,
+        )
+
     return VerifyResponse(
         query=result["query"],
         retrieval=result["retrieval"],
         generation=result["generation"],
-        nli_score=result["nli_score"],
+        nli_score=nli_score,
         verdict=result["verdict"],
+        version="v2" if req.v2_mode else "v1",
+        nli_method=nli_method,
+        n_claims=n_claims,
+        per_claim=per_claim,
     )
 
 
@@ -101,7 +168,8 @@ def verify(req: VerifyRequest):
 def health():
     return {
         "status": "ok",
-        "engine_loaded": engine is not None,
+        "engine_v1_loaded": engine_v1 is not None,
+        "engine_v2_loaded": engine_v2 is not None,
         "has_api_key": bool(GROQ_API_KEY),
     }
 
