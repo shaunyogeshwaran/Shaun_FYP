@@ -114,7 +114,7 @@ v2 adds four improvements over the baseline:
 | Sliding-window NLI | RoBERTa 512-token limit truncates long premises | Split premise into overlapping windows, take max entailment |
 | Claim decomposition | Whole-response NLI washes out single altered facts | Split hypothesis into sentences, take min score (weakest-link) |
 | Temperature scaling | Raw softmax outputs are uncalibrated | Fit temperature T on dev logits (Guo et al. 2017) |
-| Embedding upgrade | all-MiniLM-L6-v2 is outdated (2021, 384-dim) | Optional swap to BAAI/bge-small-en-v1.5 (same dim, better quality) |
+| Embedding upgrade | all-MiniLM-L6-v2 is outdated (2021, 384-dim) | BAAI/bge-small-en-v1.5 (same dim, better quality; enabled by default in v2) |
 
 **Automated pipeline** (recommended):
 
