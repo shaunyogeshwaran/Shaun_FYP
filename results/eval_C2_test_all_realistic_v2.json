@@ -1,0 +1,24 @@
+{
+  "condition": "C2",
+  "params": {
+    "T_static": 0.75
+  },
+  "split": "test",
+  "task": "all",
+  "nli_key": "nli_score",
+  "n_samples": 2959,
+  "metrics": {
+    "f1": 0.644,
+    "precision": 0.503,
+    "recall": 0.8948,
+    "accuracy": 0.5012,
+    "over_flagging_rate": 0.8991,
+    "tp": 1335,
+    "fp": 1319,
+    "tn": 148,
+    "fn": 157,
+    "mean_latency_ms": 61.33,
+    "median_latency_ms": 60.15,
+    "p95_latency_ms": 66.54
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "statistic": 0.5444,
+  "p_value": 0.460597,
+  "significant": false,
+  "b_c2_right_c3_wrong": 41,
+  "c_c2_wrong_c3_right": 49,
+  "c3_variant": "C3_tiered"
+}
