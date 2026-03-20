@@ -3,7 +3,6 @@
 
 # Claude Code
 CLAUDE.md
-DEMO_SCRIPT.md
 
 # Python
 __pycache__/
@@ -62,6 +61,5 @@ frontend/dist/
 # Model cache (optional - uncomment if you want to exclude)
 # .cache/
 
-# Experiment data and results
+# Experiment data (cached datasets)
 data/
-results/

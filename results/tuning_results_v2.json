@@ -1,0 +1,33 @@
+{
+  "C2": {
+    "best_params": {
+      "T_static": 0.54
+    },
+    "best_f1": 0.7053
+  },
+  "C3_tiered": {
+    "best_params": {
+      "method": "tiered",
+      "pivot": 0.85,
+      "T_strict": 0.58,
+      "T_lenient": 0.55
+    },
+    "best_f1": 0.7055
+  },
+  "C3_sqrt": {
+    "best_params": {
+      "method": "sqrt",
+      "T_strict": 0.62,
+      "T_lenient": 0.55
+    },
+    "best_f1": 0.7054
+  },
+  "C3_sigmoid": {
+    "best_params": {
+      "method": "sigmoid",
+      "T_strict": 0.68,
+      "T_lenient": 0.55
+    },
+    "best_f1": 0.7054
+  }
+}

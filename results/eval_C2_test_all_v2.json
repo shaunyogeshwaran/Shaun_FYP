@@ -1,24 +1,24 @@
 {
   "condition": "C2",
   "params": {
-    "T_static": 0.365
+    "T_static": 0.75
   },
   "split": "test",
   "task": "all",
-  "nli_key": "nli_score",
+  "nli_key": "nli_score_whole",
   "n_samples": 6000,
   "metrics": {
-    "f1": 0.6924,
-    "precision": 0.5926,
-    "recall": 0.8328,
-    "accuracy": 0.6298,
-    "over_flagging_rate": 0.5734,
-    "tp": 2500,
-    "fp": 1719,
-    "tn": 1279,
-    "fn": 502,
-    "mean_latency_ms": 757.46,
-    "median_latency_ms": 196.19,
-    "p95_latency_ms": 2849.75
+    "f1": 0.6955,
+    "precision": 0.5769,
+    "recall": 0.8754,
+    "accuracy": 0.6165,
+    "over_flagging_rate": 0.6428,
+    "tp": 2628,
+    "fp": 1927,
+    "tn": 1071,
+    "fn": 374,
+    "mean_latency_ms": 223.17,
+    "median_latency_ms": 74.8,
+    "p95_latency_ms": 768.23
   }
 }
