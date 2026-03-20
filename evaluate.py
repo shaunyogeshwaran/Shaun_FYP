@@ -444,6 +444,8 @@ def main():
                         help="v1=baseline, v2=decomposition+windowed+calibration")
     parser.add_argument("--nli-key", default="nli_score",
                         help="NLI score column to use (default: nli_score)")
+    parser.add_argument("--tuned", action="store_true",
+                        help="Auto-load best params from tuning results")
     args = parser.parse_args()
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -481,9 +483,31 @@ def main():
                                version=args.version)
 
     elif args.condition:
-        # Parse params (or use defaults)
+        # Parse params: --tuned loads from tuning results, --params takes JSON, else defaults
         if args.params:
             params = json.loads(args.params)
+        elif args.tuned and args.condition in ("C2", "C3"):
+            # Load best params from tuning results file
+            rsuffix = "_realistic" if args.realistic else ""
+            tuning_path = os.path.join(
+                RESULTS_DIR, f"tuning_results{rsuffix}{version_suffix}.json")
+            if not os.path.exists(tuning_path):
+                print(f"Error: tuning results not found at {tuning_path}")
+                print(f"Run: python tune.py --split dev{rsuffix}"
+                      f"{' --version ' + args.version if args.version != 'v1' else ''}")
+                return
+            with open(tuning_path) as f:
+                tuning = json.load(f)
+            if args.condition == "C2":
+                params = tuning["C2"]["best_params"]
+            else:
+                # Pick best C3 variant by F1
+                best_c3 = max(
+                    ["C3_tiered", "C3_sqrt", "C3_sigmoid"],
+                    key=lambda k: tuning[k]["best_f1"],
+                )
+                params = tuning[best_c3]["best_params"]
+            print(f"Loaded tuned params from {tuning_path}: {params}")
         else:
             if args.condition == "C1":
                 params = {}
