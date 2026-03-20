@@ -63,15 +63,13 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 ## Running the Demo
 
 ```bash
-# Terminal 1 — start the FastAPI backend
-python api.py
-
-# Terminal 2 — start the React frontend
-cd frontend
-npm run dev
+make start     # starts backend (port 8000) + frontend (port 5173)
+make stop      # stop both servers
+make restart   # bounce both servers
+make status    # check what's running
 ```
 
-Open **http://localhost:3000** (or the port shown in the terminal). The frontend has three pages:
+Open **http://localhost:5173**. The frontend has three pages:
 
 - **Verify** (`/`) — Enter a claim, adjust Cw-CONLI thresholds via the control panel, toggle **v2 Mode**, and see the full pipeline: retrieval confidence gauge, LLM generation, NLI entailment score, per-claim breakdown (v2), and animated verdict
 - **Explore** (`/explore`) — Batch-run 7 pre-configured queries across different knowledge domains and compare results in a table with aggregate stats (supports v1/v2 toggle)
