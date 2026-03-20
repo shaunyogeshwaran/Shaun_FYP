@@ -58,6 +58,7 @@ status:
 install:
 	$(PYTHON) -m pip install -r requirements.txt
 	cd frontend && npm install
+	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
 
 # ── Smoke test ─────────────────────────────────────────────────────────────────
 smoke:

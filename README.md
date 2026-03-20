@@ -55,7 +55,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 4. **Set up environment variables:**
    ```bash
-   cp .env.example .env
+   cp -n .env.example .env   # -n = skip if .env already exists
    # Edit .env and add your Groq API key (free at https://console.groq.com)
    ```
    Without a Groq API key the demo still works in offline mode (mock LLM responses; RAG + NLI verification still function).
