@@ -144,8 +144,9 @@ def main():
 
     # ---- Step 4: Evaluate on test ----
     for cond in ["C1", "C2", "C3"]:
+        tuned = " --tuned" if cond != "C1" else ""
         t = run(
-            f"python evaluate.py --condition {cond} --split test --version v2",
+            f"python evaluate.py --condition {cond} --split test --version v2{tuned}",
             f"Step 4/5: Evaluate {cond} on test set (v2)",
         )
         timings[f"eval_{cond}"] = t
