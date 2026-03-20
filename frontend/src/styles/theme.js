@@ -1,95 +1,96 @@
 /**
  * AFLHR — "The Observatory" Design System
  * Dark + Light themes with glassmorphism support.
+ * Dark theme tuned for projector visibility (boosted contrast).
  */
 
 export const dark = {
-  // Backgrounds
-  bg: '#06060b',
-  bgSurface: 'rgba(12, 12, 20, 0.75)',
-  bgElevated: 'rgba(18, 18, 28, 0.8)',
-  bgHover: '#1a1a28',
-  bgSolid: '#0c0c14',
+  // Backgrounds — slightly lifted for projector contrast
+  bg: '#0a0a12',
+  bgSurface: 'rgba(16, 16, 28, 0.85)',
+  bgElevated: 'rgba(22, 22, 36, 0.9)',
+  bgHover: '#1e1e30',
+  bgSolid: '#0e0e18',
 
-  // Borders
-  border: 'rgba(30, 30, 46, 0.6)',
-  borderLight: 'rgba(42, 42, 61, 0.6)',
+  // Borders — more visible on projector
+  border: 'rgba(50, 50, 72, 0.7)',
+  borderLight: 'rgba(65, 65, 88, 0.7)',
 
-  // Primary — Amber/Gold
-  primary: '#c9a227',
-  primaryLight: '#e4c44e',
-  primaryDim: 'rgba(201, 162, 39, 0.15)',
-  primaryGlow: 'rgba(201, 162, 39, 0.3)',
+  // Primary — Amber/Gold (boosted)
+  primary: '#dbb430',
+  primaryLight: '#f0d060',
+  primaryDim: 'rgba(219, 180, 48, 0.18)',
+  primaryGlow: 'rgba(219, 180, 48, 0.35)',
 
-  // Verified — Jade Green
-  verified: '#00d47b',
-  verifiedDim: 'rgba(0, 212, 123, 0.12)',
-  verifiedGlow: 'rgba(0, 212, 123, 0.4)',
+  // Verified — Jade Green (boosted)
+  verified: '#00e888',
+  verifiedDim: 'rgba(0, 232, 136, 0.15)',
+  verifiedGlow: 'rgba(0, 232, 136, 0.5)',
 
-  // Hallucination — Rose Red
-  hallucination: '#ff3366',
-  hallucinationDim: 'rgba(255, 51, 102, 0.12)',
-  hallucinationGlow: 'rgba(255, 51, 102, 0.4)',
+  // Hallucination — Rose Red (boosted)
+  hallucination: '#ff4477',
+  hallucinationDim: 'rgba(255, 68, 119, 0.15)',
+  hallucinationGlow: 'rgba(255, 68, 119, 0.5)',
 
-  // Text
-  text: '#e8e8f0',
-  textSecondary: '#9494a8',
-  textMuted: '#5a5a6e',
+  // Text — brighter for projector readability
+  text: '#f0f0f8',
+  textSecondary: '#b0b0c4',
+  textMuted: '#7a7a92',
 
-  // Pipeline stage accents
-  retrieve: '#3b9eff',
-  generate: '#a855f7',
-  verify: '#f59e0b',
-  verdict: '#00d47b',
+  // Pipeline stage accents (boosted)
+  retrieve: '#4dacff',
+  generate: '#b870ff',
+  verify: '#ffb020',
+  verdict: '#00e888',
 
-  // Glass
-  glass: 'rgba(12, 12, 20, 0.55)',
-  glassBorder: 'rgba(255, 255, 255, 0.06)',
+  // Glass — slightly more opaque for projector
+  glass: 'rgba(14, 14, 24, 0.7)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
   blur: 'blur(20px)',
 }
 
 export const light = {
-  // Backgrounds
-  bg: '#f0efe8',
-  bgSurface: 'rgba(255, 255, 255, 0.55)',
-  bgElevated: 'rgba(255, 255, 255, 0.7)',
-  bgHover: 'rgba(0, 0, 0, 0.03)',
+  // Backgrounds — more opaque for projector readability
+  bg: '#eae9e0',
+  bgSurface: 'rgba(255, 255, 255, 0.82)',
+  bgElevated: 'rgba(255, 255, 255, 0.92)',
+  bgHover: 'rgba(0, 0, 0, 0.05)',
   bgSolid: '#ffffff',
 
-  // Borders
-  border: 'rgba(0, 0, 0, 0.08)',
-  borderLight: 'rgba(0, 0, 0, 0.12)',
+  // Borders — much stronger for projector
+  border: 'rgba(0, 0, 0, 0.18)',
+  borderLight: 'rgba(0, 0, 0, 0.22)',
 
-  // Primary — Deeper Gold for contrast
-  primary: '#9a7b15',
-  primaryLight: '#c9a227',
-  primaryDim: 'rgba(154, 123, 21, 0.1)',
-  primaryGlow: 'rgba(154, 123, 21, 0.2)',
+  // Primary — Bold gold
+  primary: '#7a6010',
+  primaryLight: '#9a7b15',
+  primaryDim: 'rgba(122, 96, 16, 0.12)',
+  primaryGlow: 'rgba(122, 96, 16, 0.25)',
 
-  // Verified
-  verified: '#059669',
-  verifiedDim: 'rgba(5, 150, 105, 0.1)',
-  verifiedGlow: 'rgba(5, 150, 105, 0.25)',
+  // Verified — Darker green for contrast
+  verified: '#047857',
+  verifiedDim: 'rgba(4, 120, 87, 0.12)',
+  verifiedGlow: 'rgba(4, 120, 87, 0.3)',
 
-  // Hallucination
-  hallucination: '#dc2626',
-  hallucinationDim: 'rgba(220, 38, 38, 0.08)',
-  hallucinationGlow: 'rgba(220, 38, 38, 0.25)',
+  // Hallucination — Bold red
+  hallucination: '#b91c1c',
+  hallucinationDim: 'rgba(185, 28, 28, 0.1)',
+  hallucinationGlow: 'rgba(185, 28, 28, 0.3)',
 
-  // Text
-  text: '#1a1a2e',
-  textSecondary: '#4a4a62',
-  textMuted: '#8888a0',
+  // Text — darker for projector
+  text: '#0f0f1e',
+  textSecondary: '#3a3a52',
+  textMuted: '#6a6a80',
 
-  // Pipeline stage accents
-  retrieve: '#2563eb',
-  generate: '#7c3aed',
-  verify: '#d97706',
-  verdict: '#059669',
+  // Pipeline stage accents — deeper for light bg
+  retrieve: '#1d4ed8',
+  generate: '#6d28d9',
+  verify: '#b45309',
+  verdict: '#047857',
 
-  // Glass
-  glass: 'rgba(255, 255, 255, 0.45)',
-  glassBorder: 'rgba(0, 0, 0, 0.06)',
+  // Glass — more opaque
+  glass: 'rgba(255, 255, 255, 0.72)',
+  glassBorder: 'rgba(0, 0, 0, 0.12)',
   blur: 'blur(20px)',
 }
 
