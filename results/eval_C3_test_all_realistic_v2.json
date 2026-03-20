@@ -1,0 +1,27 @@
+{
+  "condition": "C3",
+  "params": {
+    "method": "tiered",
+    "pivot": 0.75,
+    "T_strict": 0.95,
+    "T_lenient": 0.7
+  },
+  "split": "test",
+  "task": "all",
+  "nli_key": "nli_score",
+  "n_samples": 2959,
+  "metrics": {
+    "f1": 0.6414,
+    "precision": 0.5064,
+    "recall": 0.8747,
+    "accuracy": 0.5069,
+    "over_flagging_rate": 0.8671,
+    "tp": 1305,
+    "fp": 1272,
+    "tn": 195,
+    "fn": 187,
+    "mean_latency_ms": 61.33,
+    "median_latency_ms": 60.15,
+    "p95_latency_ms": 66.54
+  }
+}

@@ -8,15 +8,17 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Results
 
-| Metric | v1 | v2 |
-|--------|-----|-----|
-| **QA F1 (best C3)** | 0.770 | 0.753 |
-| **QA Over-flagging** | 13.6% | **13.8%** (C3 Tiered) |
-| **Summarisation** | Broken (99%+ FPR) | **F1 = 0.656** (fixed) |
-| **C3 vs C2 significant?** | No (p = 0.25) | **Yes (p = 0.000003)** |
-| **Calibration** | None | T = 10.0 at boundary (disabled) |
+| Metric | v1 | v2 (standard) | v2 (realistic) |
+|--------|-----|---------------|----------------|
+| **Combined F1 (best C3)** | — | 0.6998 | 0.6558 |
+| **QA F1** | 0.770 | 0.770 (C2 = C3) | — |
+| **QA Over-flagging** | 13.6% | **11.2%** (C3 Tiered) | — |
+| **Summarisation** | Broken (99%+ FPR) | **F1 ≈ 0.663** (fixed) | — |
+| **Realistic FPR (C2 → C3 Sqrt)** | — | — | **100% → 44.9%** |
+| **C3 vs C2 significant?** | No (p = 0.25) | No (p = 1.0) | **Yes (p = 0.000014)** |
+| **Calibration** | None | T = 10.0 at boundary (disabled) | — |
 
-**Key finding:** Cw-CONLI significantly outperforms static CONLI (McNemar's p = 3 x 10^-6). C3 Tiered reduces QA over-flagging by 6.2 percentage points (13.8% vs 20.0%). Summarisation, previously broken due to 512-token truncation, is now functional with sliding-window NLI.
+**Key finding:** On HaluEval's standard per-sample retrieval, C3 and C2 converge to the same operating point (McNemar's p = 1.0) — retrieval scores cluster too tightly for adaptive thresholds to differentiate. Under **realistic shared-index retrieval**, the difference is significant (p = 1.4×10⁻⁵): C2 flags 100% of correct responses while C3 Sqrt reduces over-flagging to 44.9%. The primary contribution is **v2 engineering** — sliding-window NLI fixes summarisation (99% FPR → functional), claim decomposition catches partial hallucinations, and BGE embeddings improve retrieval fidelity.
 
 ## Author
 
@@ -190,38 +192,50 @@ Shaun_FYP/
 
 ## v2 Detailed Results
 
-### Combined Test Set (n = 6,000)
+### Combined Test Set — Standard (n = 6,000)
 
 | Condition | F1 | Precision | Recall | Over-flagging (FPR) |
 |-----------|-----|-----------|--------|---------------------|
 | C1 (RAG-only) | 0.000 | 0.000 | 0.000 | 0.0% |
-| C2 (Static CONLI) | 0.692 | 0.593 | 0.833 | 57.3% |
-| C3 Tiered | 0.693 | 0.606 | 0.810 | **52.7%** |
-| C3 Sqrt | **0.694** | 0.605 | 0.813 | 53.1% |
-| C3 Sigmoid | 0.694 | 0.605 | 0.813 | 53.0% |
+| C2 (Static CONLI) | 0.6988 | 0.6014 | 0.8338 | 55.3% |
+| C3 Tiered | **0.6998** | 0.6010 | 0.8374 | 55.7% |
+| C3 Sqrt | 0.6998 | 0.6008 | 0.8378 | 55.7% |
+| C3 Sigmoid | 0.6992 | 0.6005 | 0.8368 | 55.7% |
 
 ### QA Test Set (n = 2,959)
 
 | Condition | F1 | Precision | Recall | FPR |
 |-----------|-----|-----------|--------|-----|
-| C2 (Static) | 0.749 | 0.785 | 0.717 | 20.0% |
-| C3 Tiered | 0.752 | 0.834 | 0.684 | **13.8%** |
-| C3 Sqrt | **0.753** | 0.831 | 0.689 | 14.3% |
+| C2 (Static) | **0.7702** | 0.8418 | 0.7098 | 13.6% |
+| C3 Tiered | 0.7679 | 0.8629 | 0.6917 | **11.2%** |
+| C3 Sqrt | 0.7618 | 0.8776 | 0.6729 | **9.5%** |
+| C3 Sigmoid | 0.7687 | 0.8221 | 0.7218 | 15.9% |
 
 ### Summarisation Test Set (n = 3,041)
 
 | Condition | F1 | FPR | Status |
 |-----------|-----|-----|--------|
 | v1 (all conditions) | ~0 | 99%+ | Broken (token truncation) |
-| v2 C3 Sqrt | **0.656** | 90.3% | Functional (windowed NLI) |
+| v2 C2 | 0.6626 | 99.5% | Functional (windowed NLI) |
+| v2 C3 Sqrt | **0.6634** | 98.4% | Functional (windowed NLI) |
 
-### Statistical Significance
+### Realistic Test Set — Shared-Index Retrieval (n = 5,918)
 
-| | v1 | v2 |
-|---|---|---|
-| McNemar statistic | — | 22.124 |
-| p-value | 0.25 | **0.000003** |
-| Significant? | No | **Yes** |
+| Condition | F1 | Precision | Recall | FPR |
+|-----------|-----|-----------|--------|-----|
+| C2 (Static) | **0.6701** | 0.5041 | 0.9993 | 100.0% |
+| C3 Tiered | 0.6558 | 0.5236 | 0.8773 | 81.2% |
+| C3 Sqrt | 0.6414 | 0.6067 | 0.6803 | **44.9%** |
+| C3 Sigmoid | 0.6400 | 0.5604 | 0.7460 | 59.5% |
+
+### Statistical Significance (McNemar's Test)
+
+| Split | Statistic | p-value | Significant? |
+|-------|-----------|---------|-------------|
+| Combined (standard) | 0.000 | 1.0 | No |
+| QA | 0.544 | 0.461 | No |
+| Summarisation | 0.056 | 0.814 | No |
+| **Realistic** | **18.884** | **0.000014** | **Yes** |
 
 ## License
 
