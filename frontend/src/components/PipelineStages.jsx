@@ -6,10 +6,10 @@ export default function PipelineStages({ activeStage = null, loading = false }) 
   const { colors } = useTheme()
 
   const stages = [
-    { key: 'retrieve', label: 'Retrieve', icon: '◈', color: colors.retrieve },
-    { key: 'generate', label: 'Generate', icon: '◉', color: colors.generate },
-    { key: 'verify', label: 'Verify', icon: '◎', color: colors.verify },
-    { key: 'verdict', label: 'Verdict', icon: '◆', color: colors.verdict },
+    { key: 'retrieve', label: 'Retrieve', color: colors.retrieve },
+    { key: 'generate', label: 'Generate', color: colors.generate },
+    { key: 'verify', label: 'Verify', color: colors.verify },
+    { key: 'verdict', label: 'Verdict', color: colors.verdict },
   ]
 
   const activeIndex = activeStage === 'complete'
@@ -18,7 +18,8 @@ export default function PipelineStages({ activeStage = null, loading = false }) 
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, padding: '20px 0',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px 0 20px', gap: 0,
     }}>
       {stages.map((stage, i) => {
         const isActive = i === activeIndex
@@ -27,38 +28,64 @@ export default function PipelineStages({ activeStage = null, loading = false }) 
 
         return (
           <div key={stage.key} style={{ display: 'flex', alignItems: 'center' }}>
-            <motion.div
-              animate={isActive && loading ? {
-                boxShadow: [`0 0 0px ${stage.color}00`, `0 0 20px ${stage.color}80`, `0 0 0px ${stage.color}00`],
-              } : {}}
-              transition={{ duration: 1.5, repeat: Infinity }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}
-            >
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              {/* Circle */}
+              <motion.div
+                animate={isActive && loading ? {
+                  boxShadow: [`0 0 0px ${stage.color}00`, `0 0 24px ${stage.color}90`, `0 0 0px ${stage.color}00`],
+                } : {
+                  boxShadow: isComplete ? `0 0 12px ${stage.color}40` : 'none',
+                }}
+                transition={isActive && loading ? { duration: 1.5, repeat: Infinity } : { duration: 0.4 }}
+                style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  border: `2px solid ${color}`,
+                  background: isComplete ? `${stage.color}25` : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'border-color 0.4s ease, background 0.4s ease',
+                }}
+              >
+                {isComplete ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={stage.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: isActive ? stage.color : colors.textMuted,
+                    transition: 'background 0.4s ease',
+                  }} />
+                )}
+              </motion.div>
+
+              {/* Label */}
               <div style={{
-                width: 44, height: 44, borderRadius: '50%',
-                border: `2px solid ${color}`,
-                background: isComplete ? `${stage.color}20` : isActive ? `${stage.color}10` : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, color, transition: 'all 0.4s ease', fontFamily: fonts.mono,
-              }}>
-                {isComplete ? '✓' : stage.icon}
-              </div>
-              <div style={{
-                fontFamily: fonts.display, fontSize: 11, fontWeight: 700, color,
-                textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'color 0.4s ease',
+                fontFamily: fonts.mono, fontSize: 10, fontWeight: 600, color,
+                textTransform: 'uppercase', letterSpacing: '0.1em',
+                transition: 'color 0.4s ease',
               }}>
                 {stage.label}
               </div>
-            </motion.div>
+            </div>
 
+            {/* Connector line */}
             {i < stages.length - 1 && (
               <div style={{
-                width: 60, height: 2, margin: '0 8px', marginBottom: 24,
-                background: i < activeIndex || activeStage === 'complete'
-                  ? `linear-gradient(90deg, ${stages[i].color}, ${stages[i + 1].color})`
-                  : colors.border,
-                borderRadius: 1, transition: 'background 0.4s ease', position: 'relative', overflow: 'hidden',
+                width: 48, height: 2, margin: '0 10px', marginBottom: 20,
+                background: colors.border, borderRadius: 1,
+                position: 'relative', overflow: 'hidden',
               }}>
+                {/* Filled portion */}
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: (i < activeIndex || activeStage === 'complete') ? '100%' : '0%' }}
+                  transition={{ duration: 0.4 }}
+                  style={{
+                    height: '100%', borderRadius: 1,
+                    background: `linear-gradient(90deg, ${stages[i].color}, ${stages[i + 1].color})`,
+                  }}
+                />
+                {/* Shimmer when active */}
                 {isActive && loading && (
                   <motion.div
                     animate={{ x: ['-100%', '200%'] }}
