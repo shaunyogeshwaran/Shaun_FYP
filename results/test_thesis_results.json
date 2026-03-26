@@ -1,0 +1,271 @@
+{
+  "timestamp": "2026-03-26 12:56:50",
+  "functional_tests": [
+    {
+      "test_id": "FT-01",
+      "description": "Health endpoint returns system status",
+      "requirement": "FR-01",
+      "expected": "200 OK with engine status and API key flag",
+      "actual": "status=ok, v1=True, key=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-02",
+      "description": "Knowledge base endpoint returns corpus metadata",
+      "requirement": "FR-02",
+      "expected": "3 topics, 6 total passages",
+      "actual": "3 topics, 6 passages",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-03",
+      "description": "Retrieval returns relevant evidence for in-domain query",
+      "requirement": "FR-03",
+      "expected": "Context contains 'Westminster', retrieval score > 0.5",
+      "actual": "score=0.8771, Westminster found=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-04",
+      "description": "Off-topic query retrieval score lower than in-domain query",
+      "requirement": "FR-03",
+      "expected": "Off-topic retrieval < in-domain retrieval",
+      "actual": "off_topic=0.5298, in_domain=0.8007, gap=0.2709",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-05",
+      "description": "LLM generates a substantive response (online mode)",
+      "requirement": "FR-04",
+      "expected": "Non-empty response > 20 chars, not a mock",
+      "actual": "len=50, starts='The University of Westminster was founded in 1838....'",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-06",
+      "description": "Offline mode returns mock response",
+      "requirement": "FR-05",
+      "expected": "Response indicates mock/offline generation",
+      "actual": "contains_mock=True, contains_offline=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-07",
+      "description": "NLI verification produces score in [0, 1]",
+      "requirement": "FR-06",
+      "expected": "0 \u2264 nli_score \u2264 1",
+      "actual": "nli_score=0.0419",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-08",
+      "description": "Verdict contains status, passed, mode, threshold, reasoning",
+      "requirement": "FR-07",
+      "expected": "All verdict fields present, status is VERIFIED or HALLUCINATION",
+      "actual": "status=HALLUCINATION, fields=['status', 'mode', 'threshold', 'nli_score', 'retrieval_score', 'reasoning', 'passed']",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-09",
+      "description": "Adaptive threshold switches between STRICT and LENIENT modes",
+      "requirement": "FR-08",
+      "expected": "retrieval >= pivot \u2192 LENIENT, retrieval < pivot \u2192 STRICT",
+      "actual": "retr=0.88,pivot=0.3\u2192LENIENT; retr=0.88,pivot=0.99\u2192STRICT",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-10",
+      "description": "Custom thresholds are respected in verdict calculation",
+      "requirement": "FR-08",
+      "expected": "Threshold \u2265 0.98 when strict=0.99, lenient=0.99",
+      "actual": "threshold=0.9900, verdict=HALLUCINATION",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-11",
+      "description": "v1 mode returns whole-response NLI with no per-claim breakdown",
+      "requirement": "FR-09",
+      "expected": "version=v1, method=whole, n_claims=1, per_claim=[]",
+      "actual": "version=v1, method=whole, claims=1",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-12",
+      "description": "v2 mode uses decomposed NLI verification",
+      "requirement": "FR-10",
+      "expected": "version=v2, method=decomposed, n_claims \u2265 1",
+      "actual": "version=v2, method=decomposed, claims=2",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-13",
+      "description": "v2 per-claim breakdown contains claim text and score",
+      "requirement": "FR-10",
+      "expected": "Each claim has 'claim' (str) and 'score' (0-1)",
+      "actual": "2 claims, all_valid=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-14",
+      "description": "v2 NLI score equals minimum per-claim score",
+      "requirement": "FR-10",
+      "expected": "nli_score \u2248 min(per_claim scores)",
+      "actual": "nli=0.0340, min_claim=0.0340, diff=0.0000",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-15",
+      "description": "v2 produces valid scores for AI hallucination domain query",
+      "requirement": "FR-10",
+      "expected": "retrieval > 0.3, nli > 0 for in-domain query",
+      "actual": "retrieval=0.9083, nli=0.0013",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-16",
+      "description": "Invalid request body returns 422 validation error",
+      "requirement": "FR-11",
+      "expected": "HTTP 422 for missing required 'query' field",
+      "actual": "status_code=422",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-17",
+      "description": "Root endpoint serves API info page",
+      "requirement": "FR-12",
+      "expected": "200 OK with HTML containing 'AFLHR'",
+      "actual": "status=200, has_aflhr=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "FT-18",
+      "description": "Swagger/OpenAPI documentation accessible at /docs",
+      "requirement": "FR-12",
+      "expected": "200 OK at /docs",
+      "actual": "status=200",
+      "passed": true,
+      "notes": ""
+    }
+  ],
+  "nonfunctional_tests": [
+    {
+      "test_id": "NFT-01",
+      "description": "v1 online response time (3-run average)",
+      "requirement": "NFR-01",
+      "expected": "Average response < 30s for CPU-based ML pipeline",
+      "actual": "avg=405ms, max=429ms, runs=3",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-02",
+      "description": "Offline mode response time (3-run average)",
+      "requirement": "NFR-01",
+      "expected": "Average response < 15s (no LLM API call)",
+      "actual": "avg=249ms, max=254ms",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-03",
+      "description": "v2 mode response time (3-run average, offline)",
+      "requirement": "NFR-01",
+      "expected": "Average response < 60s (decomposition + windowed NLI on CPU)",
+      "actual": "avg=690ms, max=696ms",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-04",
+      "description": "System verifies factually supported in-domain claim",
+      "requirement": "NFR-02",
+      "expected": "In-domain query \u2192 VERIFIED with retrieval > 0.5",
+      "actual": "retrieval=0.8771, nli=0.8825, verdict=VERIFIED",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-05",
+      "description": "System flags off-topic query as hallucination",
+      "requirement": "NFR-02",
+      "expected": "Off-topic \u2192 HALLUCINATION with retrieval < 0.5",
+      "actual": "retrieval=0.4954, verdict=HALLUCINATION",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-06",
+      "description": "Identical queries produce identical scores (deterministic)",
+      "requirement": "NFR-03",
+      "expected": "NLI and retrieval scores differ by < 0.001 across runs",
+      "actual": "nli_diff=0.000000, retr_diff=0.000000",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-07",
+      "description": "System handles empty query without crashing",
+      "requirement": "NFR-04",
+      "expected": "Returns 200 (with low scores) or 422 (validation), no 500",
+      "actual": "status_code=200",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-08",
+      "description": "System handles very long query (2400+ chars) without crashing",
+      "requirement": "NFR-04",
+      "expected": "Returns valid response or validation error, no 500",
+      "actual": "status_code=200, query_len=2400",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-09",
+      "description": "System handles multiple sequential requests correctly",
+      "requirement": "NFR-05",
+      "expected": "3 sequential queries all return 200 OK",
+      "actual": "all_ok=True",
+      "passed": true,
+      "notes": ""
+    },
+    {
+      "test_id": "NFT-10",
+      "description": "CORS headers present for frontend cross-origin requests",
+      "requirement": "NFR-06",
+      "expected": "Access-Control-Allow-Origin header present",
+      "actual": "cors_header_present=True",
+      "passed": true,
+      "notes": ""
+    }
+  ],
+  "summary": {
+    "functional": {
+      "total": 18,
+      "passed": 18,
+      "failed": 0
+    },
+    "nonfunctional": {
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    }
+  }
+}
