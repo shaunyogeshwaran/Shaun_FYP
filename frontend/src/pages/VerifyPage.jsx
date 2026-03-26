@@ -33,7 +33,6 @@ function GlassCard({ children, style = {}, accentColor, borderColor, ...rest }) 
         border: `1px solid ${borderColor || colors.glassBorder}`,
         padding: 24,
         position: 'relative',
-        overflow: 'hidden',
         transition: 'background 0.4s ease, border-color 0.4s ease',
         ...style,
       }}
@@ -42,6 +41,7 @@ function GlassCard({ children, style = {}, accentColor, borderColor, ...rest }) 
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 2,
           background: `linear-gradient(90deg, ${accentColor}, transparent)`,
+          borderRadius: '16px 16px 0 0',
         }} />
       )}
       {children}
@@ -64,6 +64,13 @@ export default function VerifyPage() {
   const inputRef = useRef(null)
 
   useEffect(() => { inputRef.current?.focus() }, [])
+
+  // Pipeline stage color for the border glow
+  const stageColor = pipelineStage === 'retrieve' ? colors.retrieve
+    : pipelineStage === 'generate' ? colors.generate
+    : pipelineStage === 'verify' ? colors.verify
+    : pipelineStage === 'verdict' ? colors.verdict
+    : null
 
   const handleVerify = async () => {
     if (!query.trim() || loading) return
@@ -106,10 +113,11 @@ export default function VerifyPage() {
   const verdictColor = isVerified ? colors.verified : colors.hallucination
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 32px 60px' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 32px 60px', position: 'relative' }}>
+
       {/* Query input */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', position: 'relative' }}>
           <div style={{ flex: 1, position: 'relative' }}>
             <input
               ref={inputRef}
@@ -120,34 +128,53 @@ export default function VerifyPage() {
               placeholder="Enter a claim to verify..."
               style={{
                 width: '100%', padding: '16px 20px 16px 48px', borderRadius: 12,
-                border: `1px solid ${loading ? colors.primary : colors.border}`,
+                border: `1.5px solid ${stageColor || (loading ? colors.primary : colors.border)}`,
                 background: colors.bgSurface,
                 backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
                 color: colors.text, fontFamily: fonts.body, fontSize: 15, outline: 'none',
-                transition: 'all 0.3s ease',
-                boxShadow: loading ? `0 0 20px ${colors.primaryDim}` : 'none',
+                transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
+                boxShadow: stageColor
+                  ? `0 0 20px ${stageColor}30, inset 0 0 20px ${stageColor}08`
+                  : 'none',
               }}
-              onFocus={e => e.target.style.borderColor = colors.primary}
+              onFocus={e => { if (!loading) e.target.style.borderColor = colors.primary }}
               onBlur={e => { if (!loading) e.target.style.borderColor = colors.border }}
             />
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="2"
-              style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke={stageColor || colors.textMuted} strokeWidth="2"
+              style={{
+                position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)',
+                transition: 'stroke 0.4s ease',
+              }}>
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
           </div>
           <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }}
             onClick={handleVerify}
             disabled={loading || !query.trim()}
             style={{
-              padding: '16px 36px', borderRadius: 12, border: `1px solid ${colors.primary}`,
+              padding: '16px 36px', borderRadius: 12, border: `1.5px solid ${colors.primary}`,
               background: loading ? colors.bgElevated : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryLight})`,
-              color: loading ? colors.textMuted : (colors.bg === '#06060b' ? '#0a0a0a' : '#fff'),
+              color: loading ? colors.textMuted : '#0a0a0a',
               fontFamily: fonts.display, fontWeight: 700, fontSize: 14, letterSpacing: '0.05em',
               cursor: loading ? 'wait' : (!query.trim() ? 'not-allowed' : 'pointer'),
-              opacity: !query.trim() ? 0.4 : 1, textTransform: 'uppercase', transition: 'all 0.3s ease', whiteSpace: 'nowrap',
+              opacity: !query.trim() ? 0.4 : 1, textTransform: 'uppercase',
+              transition: 'all 0.3s ease', whiteSpace: 'nowrap',
+              position: 'relative', overflow: 'hidden',
             }}
           >
+            {/* Button shimmer during loading */}
+            {loading && (
+              <motion.div
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                style={{
+                  position: 'absolute', top: 0, left: 0, width: '40%', height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${colors.primaryLight}40, transparent)`,
+                }}
+              />
+            )}
             {loading ? 'Analyzing...' : 'Verify'}
           </motion.button>
         </div>
@@ -182,7 +209,7 @@ export default function VerifyPage() {
       <AnimatePresence mode="wait">
         {result && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: 16, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr 1.1fr', gap: 16, marginBottom: 24 }}>
 
               {/* Evidence */}
               <GlassCard initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} accentColor={colors.retrieve}>
@@ -359,29 +386,65 @@ export default function VerifyPage() {
 
       {/* Empty state */}
       {!result && !loading && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} style={{ textAlign: 'center', padding: '80px 0' }}>
-          <div style={{
-            width: 80, height: 80, borderRadius: 20, border: `1px solid ${colors.border}`,
-            background: colors.bgSurface, backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px',
-          }}>
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={colors.textMuted} strokeWidth="1.5">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" />
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+          style={{ textAlign: 'center', padding: '60px 0 80px' }}
+        >
+          {/* Animated shield icon */}
+          <motion.div
+            animate={{ boxShadow: [`0 0 30px ${colors.primaryGlow}`, `0 0 60px ${colors.primaryGlow}`, `0 0 30px ${colors.primaryGlow}`] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              width: 88, height: 88, borderRadius: 22,
+              border: `1.5px solid ${colors.primary}40`,
+              background: `linear-gradient(135deg, ${colors.primaryDim}, transparent)`,
+              backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 28px',
+            }}
+          >
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
             </svg>
-          </div>
-          <h2 style={{ fontFamily: fonts.display, fontSize: 22, fontWeight: 700, color: colors.textSecondary, marginBottom: 8 }}>
-            Enter a claim to verify
+          </motion.div>
+
+          <h2 style={{
+            fontFamily: fonts.display, fontSize: 24, fontWeight: 800, color: colors.text,
+            marginBottom: 6, letterSpacing: '-0.02em',
+          }}>
+            Verify a claim
           </h2>
-          <p style={{ fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, maxWidth: 440, margin: '0 auto 28px', lineHeight: 1.6 }}>
-            The pipeline will retrieve evidence, generate a response, and verify it using confidence-weighted NLI.
+          <p style={{
+            fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            maxWidth: 480, margin: '0 auto 32px',
+          }}>
+            Retrieve evidence &rarr; Generate response &rarr; NLI verification &rarr; Adaptive verdict
           </p>
+
+          <div style={{
+            fontFamily: fonts.mono, fontSize: 10, color: colors.textMuted,
+            letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 14,
+          }}>
+            Try a query
+          </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {SUGGESTED_QUERIES.map(q => (
-              <motion.button key={q} whileHover={{ scale: 1.03, borderColor: colors.primary }} whileTap={{ scale: 0.97 }} onClick={() => setQuery(q)}
+            {SUGGESTED_QUERIES.map((q, i) => (
+              <motion.button
+                key={q}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                whileHover={{ scale: 1.03, borderColor: colors.primary, background: colors.primaryDim }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setQuery(q)}
                 style={{
-                  padding: '10px 18px', borderRadius: 10, border: `1px solid ${colors.border}`,
-                  background: colors.bgSurface, backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
-                  color: colors.textSecondary, fontFamily: fonts.body, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s ease',
+                  padding: '10px 18px', borderRadius: 10,
+                  border: `1px solid ${colors.border}`,
+                  background: colors.bgSurface,
+                  backdropFilter: colors.blur, WebkitBackdropFilter: colors.blur,
+                  color: colors.textSecondary, fontFamily: fonts.body, fontSize: 12,
+                  cursor: 'pointer', transition: 'all 0.2s ease',
                 }}
               >
                 {q}
