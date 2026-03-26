@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './ThemeContext'
 import Header from './components/Header'
+import BackgroundEffects from './components/BackgroundEffects'
 import VerifyPage from './pages/VerifyPage'
 import ExplorePage from './pages/ExplorePage'
 import AboutPage from './pages/AboutPage'
@@ -26,6 +27,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
+      <BackgroundEffects />
       <BrowserRouter>
         <Header health={health} />
         <Routes>
