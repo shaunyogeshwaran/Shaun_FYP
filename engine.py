@@ -2,6 +2,10 @@
 AFLHR Lite - Core Engine Module
 Handles retrieval, generation, and verification logic.
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The pipeline architecture,
+algorithm design, and research methodology are the author's own work.
+
 v2 improvements:
   - Sliding-window NLI (fixes 512-token truncation for long premises)
   - Sentence-level claim decomposition (addresses semantic illusion)

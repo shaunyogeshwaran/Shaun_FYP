@@ -3,6 +3,10 @@ AFLHR Lite - Evaluation Harness
 Pre-computes retrieval + NLI scores, then applies condition logic
 (C1/C2/C3) to produce metrics.
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The evaluation methodology
+and experimental design are the author's own work.
+
 Usage:
   # Pre-compute scores (slow - requires model inference)
   python evaluate.py --precompute --split dev

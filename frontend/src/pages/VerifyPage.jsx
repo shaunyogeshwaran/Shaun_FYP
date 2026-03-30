@@ -1,3 +1,7 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The UI design and interaction
+// logic are the author's own work.
+
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../ThemeContext'
