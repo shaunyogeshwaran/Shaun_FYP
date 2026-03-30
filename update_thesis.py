@@ -1220,6 +1220,70 @@ def _add_caption_after_table(table, text):
     cap_p.append(cap_run)
 
 
+# ── SLEP AI Declaration (Chapter 5.2.3) ──────────────────────────────────
+
+AI_DECLARATION = (
+    "AI-based development tools were used during the implementation phase to "
+    "assist with code structuring, debugging, and refactoring of complex modules "
+    "(engine.py, evaluate.py, analyze.py, api.py, test_thesis.py, and "
+    "VerifyPage.jsx). These tools were not used to generate the thesis text, "
+    "research methodology, algorithm design, or experimental results. All "
+    "architectural decisions, research questions, and analysis remain the "
+    "author\u2019s own work. Affected source files contain an explicit "
+    "\u201cAI Disclosure\u201d comment in their header. Usage was limited to an "
+    "assistive role consistent with the University of Westminster\u2019s Guidance "
+    "for Students on the Use of Generative AI."
+)
+
+AI_DECLARATION_NEEDLE = "AI-based development tools were used during the implementation phase"
+
+
+def update_slep_ai_declaration(doc, dry_run=False):
+    """Insert or update AI declaration paragraph in SLEP section 5.2.3."""
+    changes = 0
+
+    # Check if already present
+    idx, existing = find_para(doc, AI_DECLARATION_NEEDLE)
+    if existing is not None:
+        if not dry_run:
+            replace_para_text(existing, AI_DECLARATION)
+        print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'} P{idx}: AI declaration (already present)")
+        changes += 1
+        return changes
+
+    # Find the 5.2.3 Ethical Issues heading
+    idx, heading = find_para(doc, "Ethical")
+    if heading is None:
+        # Try alternate needle
+        idx, heading = find_para(doc, "5.2.3")
+    if heading is None:
+        print("  SKIP: Could not find Ethical Issues heading in SLEP chapter")
+        return 0
+
+    # Find the next paragraph after the heading that has content (skip blanks)
+    # We'll insert after the last paragraph of section 5.2.3 content,
+    # which is before the next heading (5.2.4 or Professional)
+    insert_idx = idx + 1
+    for i in range(idx + 1, len(doc.paragraphs)):
+        p = doc.paragraphs[i]
+        # Stop if we hit the next section heading
+        if "Professional" in p.text or "5.2.4" in p.text or "Sustainability" in p.text or "5.2.5" in p.text:
+            insert_idx = i
+            break
+        insert_idx = i + 1
+
+    if not dry_run:
+        # Insert a new paragraph before the next section
+        ref_para = doc.paragraphs[insert_idx] if insert_idx < len(doc.paragraphs) else doc.paragraphs[-1]
+        new_p = ref_para.insert_paragraph_before(AI_DECLARATION)
+        # Copy body text style
+        if ref_para.style:
+            new_p.style = doc.styles['Normal']
+    print(f"  {'WOULD INSERT' if dry_run else 'INSERTED'} before P{insert_idx}: AI declaration in SLEP 5.2.3")
+    changes += 1
+    return changes
+
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 def main():
@@ -1276,6 +1340,10 @@ def main():
     # Chapter 9: Critical Evaluation
     print("\nChapter 9 updates:")
     changes += update_critical_evaluation(doc, dry_run=dry_run)
+
+    # SLEP Chapter 5.2.3: AI declaration
+    print("\nSLEP AI declaration:")
+    changes += update_slep_ai_declaration(doc, dry_run=dry_run)
 
     # Save
     if args.apply:
