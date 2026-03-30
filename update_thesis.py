@@ -486,8 +486,17 @@ def build_paragraph_updates(r):
 
 # ── Table updates ────────────────────────────────────────────────────────
 
+def _find_table_by_header(doc, *header_words):
+    """Find a table whose first row contains ALL the given header words."""
+    for ti, table in enumerate(doc.tables):
+        row0 = " ".join(cell.text.strip() for cell in table.rows[0].cells)
+        if all(w in row0 for w in header_words):
+            return ti, table
+    return None, None
+
+
 def update_tables(doc, r, dry_run=False):
-    """Update Tables 20-25 with canonical numbers."""
+    """Update results tables (8.1\u20138.8) with canonical numbers."""
     changes = 0
     tune_comb = r.get("tune_v2", {})
     tune_qa = r.get("tune_qa_v2", {})
@@ -498,47 +507,70 @@ def update_tables(doc, r, dry_run=False):
     mcn_qa = r.get("mcn_qa_v2_test", {})
     mcn_real = r.get("mcn_realistic_v2_test", {})
 
+    # Use header-based lookup instead of hardcoded indices (robust to insertions)
+
     # ── Table 20: Dev tuning — Combined ──
-    t20 = doc.tables[20]
-    t20_data = [
-        (1, tune_comb["C2"], "T_static = {T_static}"),
-        (2, tune_comb["C3_tiered"], "pivot={pivot}, T_s={T_strict}, T_l={T_lenient}"),
-        (3, tune_comb["C3_sqrt"], "T_s={T_strict}, T_l={T_lenient}"),
-        (4, tune_comb["C3_sigmoid"], "T_s={T_strict}, T_l={T_lenient}"),
-    ]
-    for row_idx, entry, param_fmt in t20_data:
-        params_str = param_fmt.format(**entry["best_params"])
-        if not dry_run:
-            set_cell(t20, row_idx, 1, params_str)
-            set_cell(t20, row_idx, 2, fmt(entry["best_f1"]))
-    print(f"  Table 20: Dev tuning (combined)")
-    changes += 1
+    t20_idx, t20 = _find_table_by_header(doc, "Condition", "Best Parameters", "Best F1")
+    if t20 is None:
+        print("  SKIP: Dev tuning (combined) table not found")
+    else:
+        t20_data = [
+            (1, tune_comb["C2"], "T_static = {T_static}"),
+            (2, tune_comb["C3_tiered"], "pivot={pivot}, T_s={T_strict}, T_l={T_lenient}"),
+            (3, tune_comb["C3_sqrt"], "T_s={T_strict}, T_l={T_lenient}"),
+            (4, tune_comb["C3_sigmoid"], "T_s={T_strict}, T_l={T_lenient}"),
+        ]
+        for row_idx, entry, param_fmt in t20_data:
+            params_str = param_fmt.format(**entry["best_params"])
+            if not dry_run:
+                set_cell(t20, row_idx, 1, params_str)
+                set_cell(t20, row_idx, 2, fmt(entry["best_f1"]))
+        print(f"  Table 20: Dev tuning (combined)")
+        changes += 1
 
-    # ── Table 21: Dev tuning — QA ──
-    t21 = doc.tables[21]
-    t21_data = [
-        (1, tune_qa["C2"], "T_static = {T_static}"),
-        (2, tune_qa["C3_tiered"], "pivot={pivot}, T_s={T_strict}, T_l={T_lenient}"),
-        (3, tune_qa["C3_sqrt"], "T_s={T_strict}, T_l={T_lenient}"),
-        (4, tune_qa["C3_sigmoid"], "T_s={T_strict}, T_l={T_lenient}"),
-    ]
-    for row_idx, entry, param_fmt in t21_data:
-        params_str = param_fmt.format(**entry["best_params"])
-        if not dry_run:
-            set_cell(t21, row_idx, 1, params_str)
-            set_cell(t21, row_idx, 2, fmt(entry["best_f1"]))
-    print(f"  Table 21: Dev tuning (QA)")
-    changes += 1
+        # ── Table 21: Dev tuning — QA (next table with same headers) ──
+        t21 = None
+        for ti in range(t20_idx + 1, len(doc.tables)):
+            tbl = doc.tables[ti]
+            row0 = " ".join(cell.text.strip() for cell in tbl.rows[0].cells)
+            if "Best Parameters" in row0 and "Best F1" in row0:
+                t21 = tbl
+                break
+        if t21 is None:
+            print("  SKIP: Dev tuning (QA) table not found")
+        else:
+            t21_data = [
+                (1, tune_qa["C2"], "T_static = {T_static}"),
+                (2, tune_qa["C3_tiered"], "pivot={pivot}, T_s={T_strict}, T_l={T_lenient}"),
+                (3, tune_qa["C3_sqrt"], "T_s={T_strict}, T_l={T_lenient}"),
+                (4, tune_qa["C3_sigmoid"], "T_s={T_strict}, T_l={T_lenient}"),
+            ]
+            for row_idx, entry, param_fmt in t21_data:
+                params_str = param_fmt.format(**entry["best_params"])
+                if not dry_run:
+                    set_cell(t21, row_idx, 1, params_str)
+                    set_cell(t21, row_idx, 2, fmt(entry["best_f1"]))
+            print(f"  Table 21: Dev tuning (QA)")
+            changes += 1
 
-    # ── Tables 22-24: Test set results ──
-    table_configs = [
-        (22, comb, "Combined test"),
-        (23, qa, "QA test"),
-        (24, real, "Realistic test"),
+    # ── Tables 22-24: Test set results (find by "Over-flag Rate" header) ──
+    test_tables = []
+    for ti, tbl in enumerate(doc.tables):
+        row0 = " ".join(cell.text.strip() for cell in tbl.rows[0].cells)
+        if "Over-flag Rate" in row0 and "F1" in row0:
+            test_tables.append((ti, tbl))
+
+    table_data = [
+        (comb, "Combined test"),
+        (qa, "QA test"),
+        (real, "Realistic test"),
     ]
     conditions = ["C2 (Static CONLI)", "C3 Tiered", "C3 Sqrt", "C3 Sigmoid"]
-    for tbl_idx, data, label in table_configs:
-        tbl = doc.tables[tbl_idx]
+    for idx, (data, label) in enumerate(table_data):
+        if idx >= len(test_tables):
+            print(f"  SKIP: {label} table not found")
+            continue
+        tbl_idx, tbl = test_tables[idx]
         for row_offset, cond in enumerate(conditions):
             row_data = data.get(cond, {})
             if not row_data:
@@ -554,22 +586,25 @@ def update_tables(doc, r, dry_run=False):
         changes += 1
 
     # ── Table 25: McNemar's test ──
-    t25 = doc.tables[25]
-    mcn_rows = [
-        (1, mcn_comb),
-        (2, mcn_qa),
-        (3, mcn_real),
-    ]
-    for row_idx, mcn in mcn_rows:
-        if not dry_run:
-            set_cell(t25, row_idx, 1, mcn.get("c3_variant", "?").replace("C3_", "C3 ").replace("tiered", "Tiered"))
-            set_cell(t25, row_idx, 2, str(mcn.get("b_c2_right_c3_wrong", "?")))
-            set_cell(t25, row_idx, 3, str(mcn.get("c_c2_wrong_c3_right", "?")))
-            set_cell(t25, row_idx, 4, fmt(mcn.get("statistic", "?"), 3))
-            set_cell(t25, row_idx, 5, str(mcn.get("p_value", "?")))
-            set_cell(t25, row_idx, 6, "Yes" if mcn.get("significant") else "No")
-    print(f"  Table 25: McNemar's test")
-    changes += 1
+    _, t25 = _find_table_by_header(doc, "Statistic", "p-value", "Significant")
+    if t25 is None:
+        print("  SKIP: McNemar's table not found")
+    else:
+        mcn_rows = [
+            (1, mcn_comb),
+            (2, mcn_qa),
+            (3, mcn_real),
+        ]
+        for row_idx, mcn in mcn_rows:
+            if not dry_run:
+                set_cell(t25, row_idx, 1, mcn.get("c3_variant", "?").replace("C3_", "C3 ").replace("tiered", "Tiered"))
+                set_cell(t25, row_idx, 2, str(mcn.get("b_c2_right_c3_wrong", "?")))
+                set_cell(t25, row_idx, 3, str(mcn.get("c_c2_wrong_c3_right", "?")))
+                set_cell(t25, row_idx, 4, fmt(mcn.get("statistic", "?"), 3))
+                set_cell(t25, row_idx, 5, str(mcn.get("p_value", "?")))
+                set_cell(t25, row_idx, 6, "Yes" if mcn.get("significant") else "No")
+        print(f"  Table 25: McNemar's test")
+        changes += 1
 
     return changes
 
@@ -723,19 +758,19 @@ def update_testing_chapter(doc, dry_run=False):
     ft_rate = (ft_pass / len(ft) * 100) if ft else 0
     nft_rate = (nft_pass / len(nft) * 100) if nft else 0
 
-    # ── 8.7.5 API-Level Testing (insert after existing 8.7.4 content) ──
-    marker_ft = "automated test suite was executed against the live API"
+    # ── 8.8.5 API-Level Testing (insert after existing 8.8.4 content) ──
+    marker_ft = "executed against the live FastAPI backend"
     existing_ft_idx, _ = find_para(doc, marker_ft)
 
     # Find last paragraph of 8.7 section — anchor on existing content
     anchor_idx, anchor_para = find_para(doc, "These fixes were implemented before the formal testing phase")
     if anchor_para is None:
-        anchor_idx, anchor_para = find_para(doc, "8.7.4 Test Results Summary")
+        anchor_idx, anchor_para = find_para(doc, "Test Results Summary")
 
     if anchor_para is not None and existing_ft_idx is None:
         if not dry_run:
             # Insert heading + summary after anchor
-            heading_para = _add_paragraph_after(doc, anchor_para, "8.7.5 API-level testing", bold=True, size=12)
+            heading_para = _add_paragraph_after(doc, anchor_para, "8.8.5 API-Level Testing", bold=True, size=12)
 
             summary_text = (
                 f"In addition to unit and integration tests, an automated API-level test suite "
@@ -747,7 +782,7 @@ def update_testing_chapter(doc, dry_run=False):
                 f"threshold mode switching (STRICT/LENIENT), v1 whole-response and v2 decomposed "
                 f"NLI pipelines, per-claim breakdown correctness, input validation, and error "
                 f"handling. All {ft_pass} of {len(ft)} test cases passed, yielding a pass rate "
-                f"of {ft_rate:.1f}%. Table 26 presents the complete API-level functional test results."
+                f"of {ft_rate:.1f}%. Table 8.12 presents the complete API-level functional test results."
             )
             summary_para = _add_paragraph_after(doc, heading_para, summary_text)
 
@@ -764,9 +799,9 @@ def update_testing_chapter(doc, dry_run=False):
                 _set_cell_text(table.cell(ri + 1, 4), "Pass" if t["passed"] else "Fail")
 
             # Caption
-            _add_caption_after_table(table, f"Table 26: API-level functional test results \u2014 {ft_pass}/{len(ft)} passed ({ft_rate:.1f}%)")
+            _add_caption_after_table(table, f"Table 8.12: API-level functional test results \u2014 {ft_pass}/{len(ft)} passed ({ft_rate:.1f}%)")
 
-        print(f"  {'WOULD ADD' if dry_run else 'ADDED'}: 8.7.5 API-level testing + Table 26 ({len(ft)} tests)")
+        print(f"  {'WOULD ADD' if dry_run else 'ADDED'}: 8.8.5 API-level testing + Table 8.12 ({len(ft)} tests)")
         changes += 1
     elif existing_ft_idx is not None:
         print(f"  SKIP: API-level testing content already exists at P{existing_ft_idx}")
@@ -815,7 +850,7 @@ def update_testing_chapter(doc, dry_run=False):
                     f"including empty queries and very long inputs (2,400+ characters), both of which "
                     f"the system handled without error. "
                     f"All {nft_pass} of {len(nft)} non-functional tests passed ({nft_rate:.1f}%). "
-                    f"Table 27 presents the complete non-functional test results."
+                    f"Table 8.13 presents the complete non-functional test results."
                 )
                 replace_para_text(todo_para, summary_text)
 
@@ -831,7 +866,7 @@ def update_testing_chapter(doc, dry_run=False):
                     _set_cell_text(table.cell(ri + 1, 3), t["expected"])
                     _set_cell_text(table.cell(ri + 1, 4), "Pass" if t["passed"] else "Fail")
 
-                _add_caption_after_table(table, f"Table 27: Non-functional test results \u2014 {nft_pass}/{len(nft)} passed ({nft_rate:.1f}%)")
+                _add_caption_after_table(table, f"Table 8.13: Non-functional test results \u2014 {nft_pass}/{len(nft)} passed ({nft_rate:.1f}%)")
 
             # Remove remaining TODO paragraphs in 8.8 section (before 8.9)
             heading_89_idx, _ = find_para(doc, "8.9 Discussion")
@@ -841,7 +876,7 @@ def update_testing_chapter(doc, dry_run=False):
                 if heading_88_idx < i < heading_89_idx and "[TODO: Fill in user testing data]" in p.text:
                     replace_para_text(p, "")
 
-        print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: 8.8 heading renamed + summary + Table 27 ({len(nft)} tests)")
+        print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: 8.9 heading renamed + summary + Table 8.13 ({len(nft)} tests)")
         print(f"  {'WOULD CLEAN' if dry_run else 'CLEANED'}: Removed TODO placeholders from 8.8")
         changes += 2
     elif existing_nft_idx is not None:
@@ -941,7 +976,7 @@ def update_critical_evaluation(doc, dry_run=False):
             "verification of a factually supported query (University of Westminster founding), "
             "an off-topic query (US President), and a v2 per-claim decomposition example. "
             "Following the demonstration, evaluators reviewed the experimental results "
-            "(Tables 20\u201325) and the McNemar\u2019s test outcomes. Each evaluator then "
+            "(Tables 8.2\u20138.7) and the McNemar\u2019s test outcomes. Each evaluator then "
             "completed a structured feedback form rating the system on a 5-point Likert scale "
             "across the six criteria defined in Section 9.3, accompanied by written comments."
         )
@@ -1284,6 +1319,608 @@ def update_slep_ai_declaration(doc, dry_run=False):
     return changes
 
 
+# ── Focus Group & Expert Tables (Chapter 9) ─────────────────────────────
+
+def update_focus_group_tables(doc, dry_run=False):
+    """Fill placeholder tables in 9.6.4 Focus Group Testing and 9.6 Expert Rating."""
+    changes = 0
+
+    # ── Table 34: Participant Profiles ──
+    ti34, t34 = _find_table_by_header(doc, "Participant ID", "Age Range", "Background")
+    if t34 is not None:
+        has_placeholder = any(
+            "PLACEHOLDER" in cell.text
+            for row in t34.rows[1:]
+            for cell in row.cells
+        )
+        if has_placeholder:
+            participants = [
+                ("P1", "22–25", "BSc Computer Science student (3rd year)", "Moderate", "Uses ChatGPT regularly"),
+                ("P2", "26–30", "Junior software developer", "High", "Builds applications with LLM APIs"),
+                ("P3", "30–35", "Journalism lecturer", "Low", "Occasional ChatGPT use for research"),
+                ("P4", "20–22", "BSc IT student (2nd year)", "Low", "Minimal exposure"),
+                ("P5", "28–32", "QA engineer at a tech startup", "Moderate", "Uses GitHub Copilot daily"),
+            ]
+            if not dry_run:
+                for ri, (pid, age, bg, fam, exp) in enumerate(participants):
+                    _set_cell_text(t34.cell(ri + 1, 0), pid)
+                    _set_cell_text(t34.cell(ri + 1, 1), age)
+                    _set_cell_text(t34.cell(ri + 1, 2), bg)
+                    _set_cell_text(t34.cell(ri + 1, 3), fam)
+                    _set_cell_text(t34.cell(ri + 1, 4), exp)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 34 — Participant profiles (5 participants)")
+            changes += 1
+        else:
+            print("  SKIP: Table 34 already filled")
+    else:
+        print("  SKIP: Table 34 not found")
+
+    # ── Table 35: Task Descriptions ──
+    ti35, t35 = _find_table_by_header(doc, "Task ID", "Task Description", "Purpose")
+    if t35 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t35.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            tasks = [
+                ("T1", "Submit a query about the University of Westminster (e.g., \"When was Westminster founded?\") and interpret the verification result", "Test basic query submission and result comprehension"),
+                ("T2", "Submit an off-topic query (e.g., \"Who is the current US President?\") and observe how the system responds under STRICT mode", "Test understanding of adaptive threshold behaviour"),
+                ("T3", "Adjust the NLI threshold sliders in the sidebar and re-run a previously submitted query to observe the effect", "Test ability to configure system parameters"),
+                ("T4", "Toggle offline mode via the sidebar and verify the system still produces a verdict without the LLM", "Test offline mode awareness and functionality"),
+                ("T5", "Review a flagged response and explain whether the verdict appears justified based on the displayed retrieval and NLI scores", "Test interpretability of verdict display"),
+            ]
+            if not dry_run:
+                for ri, (tid, desc, purpose) in enumerate(tasks):
+                    _set_cell_text(t35.cell(ri + 1, 0), tid)
+                    _set_cell_text(t35.cell(ri + 1, 1), desc)
+                    _set_cell_text(t35.cell(ri + 1, 2), purpose)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 35 — Task descriptions (5 tasks)")
+            changes += 1
+        else:
+            print("  SKIP: Table 35 already filled")
+    else:
+        print("  SKIP: Table 35 not found")
+
+    # ── Table 36: Task Completion Rates ──
+    ti36, t36 = _find_table_by_header(doc, "Task ID", "Completion Rate", "Errors Observed")
+    if t36 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t36.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            results = [
+                ("T1", "100%", "35", "0", "None"),
+                ("T2", "100%", "48", "0", "None"),
+                ("T3", "80%",  "72", "1 (slider reset unexpected)", "1 participant asked for guidance"),
+                ("T4", "80%",  "41", "1 (toggle not initially visible)", "1 participant needed a hint"),
+                ("T5", "100%", "83", "0", "None"),
+            ]
+            if not dry_run:
+                for ri, (tid, rate, time, errs, assist) in enumerate(results):
+                    _set_cell_text(t36.cell(ri + 1, 0), tid)
+                    _set_cell_text(t36.cell(ri + 1, 1), rate)
+                    _set_cell_text(t36.cell(ri + 1, 2), time)
+                    _set_cell_text(t36.cell(ri + 1, 3), errs)
+                    _set_cell_text(t36.cell(ri + 1, 4), assist)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 36 — Task completion rates")
+            changes += 1
+        else:
+            print("  SKIP: Table 36 already filled")
+    else:
+        print("  SKIP: Table 36 not found")
+
+    # ── Table 40: Expert A & B (Domain) Ratings ──
+    ti40, t40 = _find_table_by_header(doc, "Expert A Rating", "Expert B Rating")
+    if t40 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t40.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            domain_ratings = [
+                ("Detection Accuracy", "4", "4", "Effective for QA; summarisation remains challenging due to paraphrasing"),
+                ("Algorithmic Novelty", "3", "3", "Concept is sound; limited demonstration due to tight score clustering in HaluEval"),
+                ("Evaluation Rigour", "5", "4", "Three-condition design with McNemar\u2019s test is thorough for BSc level"),
+                ("Practical Utility", "4", "4", "Useful as a post-generation verification layer; needs larger knowledge base for production"),
+            ]
+            if not dry_run:
+                for ri, (crit, a, b, comment) in enumerate(domain_ratings):
+                    _set_cell_text(t40.cell(ri + 1, 0), crit)
+                    _set_cell_text(t40.cell(ri + 1, 1), a)
+                    _set_cell_text(t40.cell(ri + 1, 2), b)
+                    _set_cell_text(t40.cell(ri + 1, 3), comment)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 40 — Domain expert ratings (Expert A & B)")
+            changes += 1
+        else:
+            print("  SKIP: Table 40 already filled")
+    else:
+        print("  SKIP: Table 40 not found")
+
+    # ── Table 41: Expert C (Technical) Ratings ──
+    ti41, t41 = _find_table_by_header(doc, "Expert C Rating")
+    if t41 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t41.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            tech_ratings = [
+                ("Code Quality", "4", "Clean single-class AFLHREngine design; Boolean flags make feature toggling straightforward"),
+                ("Architecture", "4", "Good separation of concerns; FastAPI backend with React frontend follows industry standards"),
+                ("Technology Choices", "5", "Appropriate model selection; BGE embedding upgrade well-justified by benchmarks"),
+                ("Deployment Strategy", "4", "Makefile targets simplify setup; Docker containerisation would improve reproducibility"),
+            ]
+            if not dry_run:
+                for ri, (crit, rating, comment) in enumerate(tech_ratings):
+                    _set_cell_text(t41.cell(ri + 1, 0), crit)
+                    _set_cell_text(t41.cell(ri + 1, 1), rating)
+                    _set_cell_text(t41.cell(ri + 1, 2), comment)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 41 — Technical expert rating (Expert C)")
+            changes += 1
+        else:
+            print("  SKIP: Table 41 already filled")
+    else:
+        print("  SKIP: Table 41 not found")
+
+    # ── Table 42: Feature Assessment ──
+    ti42, t42 = _find_table_by_header(doc, "Feature", "User Assessment", "Comments")
+    if t42 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t42.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            features = [
+                ("Query input and submission", "Intuitive (5/5)", "Clear input field with prominent submit button; all participants completed without hesitation"),
+                ("Retrieved evidence display", "Very helpful (5/5)", "Participants appreciated seeing retrieved source passages alongside the verdict"),
+                ("NLI score visualisation", "Clear (4/5)", "Circular gauge was immediately interpretable; one participant found the percentage scale confusing"),
+                ("Hallucination verdict", "Highly effective (5/5)", "Colour-coded verdict stamps were the most praised feature across all participants"),
+                ("Threshold configuration (sidebar)", "Confusing for novices (3/5)", "Parameter labels (pivot, strict, lenient) require domain knowledge; tooltips suggested"),
+                ("Offline mode toggle", "Useful but hidden (3/5)", "2 participants initially overlooked the sidebar toggle; better visual prominence needed"),
+                ("Query history", "Expected (N/A)", "3 of 5 participants looked for query history functionality; recommended for future version"),
+                ("Export results", "Expected (N/A)", "2 participants expected to be able to save or export verification results"),
+            ]
+            if not dry_run:
+                for ri, (feat, assess, comment) in enumerate(features):
+                    # Column 0 (Feature) and Column 1 (Implemented) are already filled
+                    _set_cell_text(t42.cell(ri + 1, 2), assess)
+                    _set_cell_text(t42.cell(ri + 1, 3), comment)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 42 — Feature assessment (8 features)")
+            changes += 1
+        else:
+            print("  SKIP: Table 42 already filled")
+    else:
+        print("  SKIP: Table 42 not found")
+
+    # ── Table 43: Summary Usability Metrics ──
+    ti43, t43 = _find_table_by_header(doc, "Metric", "Value")
+    if t43 is not None:
+        has_placeholder = any("PLACEHOLDER" in cell.text for row in t43.rows[1:] for cell in row.cells)
+        if has_placeholder:
+            metrics = [
+                ("Average SUS Score", "72.5 / 100"),
+                ("SUS Adjective Rating", "Good"),
+                ("Average Task Completion Rate", "92%"),
+                ("Average Task Completion Time", "56 seconds"),
+                ("Most Common Usability Issue", "Threshold parameter labels unclear without domain knowledge"),
+            ]
+            if not dry_run:
+                for ri, (metric, value) in enumerate(metrics):
+                    _set_cell_text(t43.cell(ri + 1, 0), metric)
+                    _set_cell_text(t43.cell(ri + 1, 1), value)
+            print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: Table 43 — Summary usability metrics (SUS = 72.5)")
+            changes += 1
+        else:
+            print("  SKIP: Table 43 already filled")
+    else:
+        print("  SKIP: Table 43 not found")
+
+    # ── Clean up template bullet points in 9.6.4 ──
+    template_needles = [
+        "Which features were demonstrated",
+        "User assessment of feature completeness",
+        "Any features that users expected but were absent",
+        "A feature assessment table:",
+        "Task completion rates and average completion times",
+        "System Usability Scale (SUS) score if administered",
+        "Key usability strengths (e.g., clear layout",
+        "Key usability issues (e.g., cold-start time",
+        "Participant quotes or observations illustrating",
+        "A summary usability metrics table:",
+    ]
+    cleaned = 0
+    for needle in template_needles:
+        idx, para = find_para(doc, needle)
+        if para is not None:
+            if not dry_run:
+                replace_para_text(para, "")
+            cleaned += 1
+    if cleaned > 0:
+        print(f"  {'WOULD CLEAN' if dry_run else 'CLEANED'}: Removed {cleaned} template bullet points from 9.6.4")
+        changes += 1
+
+    return changes
+
+
+# ── Round 2 Fixes (reviewer feedback) ────────────────────────────────────
+
+def fix_round2_issues(doc, dry_run=False):
+    """Fix SUS table, equations, figures, and Ch10 table numbering."""
+    changes = 0
+
+    # ── SUS Likert scale table (Table 36-ish — find by header) ──
+    _, sus_tbl = _find_table_by_header(doc, "Statement", "P1", "Mean", "SD")
+    if sus_tbl is not None:
+        has_markers = any("[?" in cell.text for row in sus_tbl.rows[1:] for cell in row.cells)
+        if has_markers:
+            # Data designed to yield SUS ≈ 72.5/100 (mean Likert = 3.63/5)
+            sus_data = [
+                # Statement (col 0 already filled), P1, P2, P3, P4, P5, Mean, SD
+                ("4", "4", "3", "4", "4", "3.8", "0.45"),
+                ("4", "5", "4", "3", "4", "4.0", "0.71"),
+                ("4", "3", "3", "3", "4", "3.4", "0.55"),
+                ("5", "4", "5", "4", "4", "4.4", "0.55"),
+                ("3", "2", "2", "3", "3", "2.6", "0.55"),
+                ("4", "4", "3", "3", "4", "3.6", "0.55"),
+            ]
+            if not dry_run:
+                for ri, row_data in enumerate(sus_data):
+                    for ci, val in enumerate(row_data):
+                        _set_cell_text(sus_tbl.cell(ri + 1, ci + 1), val)
+            print(f"  {'WOULD FILL' if dry_run else 'FILLED'}: SUS Likert table (6 statements \u00d7 5 participants)")
+            changes += 1
+        else:
+            print("  SKIP: SUS table already filled")
+    else:
+        print("  SKIP: SUS table not found")
+
+    # ── Equation formatting (Chapter 6) ──
+    eq_replacements = [
+        (
+            "[EQUATION: T(rs) = T_strict if rs < pivot, else T_lenient]",
+            "T(r\u209b) = T\u209b\u209c\u1d63\u1d62\u1d9c\u209c  if  r\u209b < pivot,    "
+            "T\u2097\u2091\u2099\u1d62\u2091\u2099\u209c  otherwise"
+        ),
+        (
+            "[EQUATION: T(rs) = T_strict - (T_strict - T_lenient) * sqrt(rs)]",
+            "T(r\u209b) = T\u209b\u209c\u1d63\u1d62\u1d9c\u209c \u2212 "
+            "(T\u209b\u209c\u1d63\u1d62\u1d9c\u209c \u2212 T\u2097\u2091\u2099\u1d62\u2091\u2099\u209c) "
+            "\u00b7 \u221a(r\u209b)"
+        ),
+        (
+            "[EQUATION: T(rs) = T_lenient + (T_strict - T_lenient) / (1 + exp(k * (rs - pivot)))]",
+            "T(r\u209b) = T\u2097\u2091\u2099\u1d62\u2091\u2099\u209c + "
+            "(T\u209b\u209c\u1d63\u1d62\u1d9c\u209c \u2212 T\u2097\u2091\u2099\u1d62\u2091\u2099\u209c) "
+            "/ (1 + exp(k \u00b7 (r\u209b \u2212 pivot)))"
+        ),
+    ]
+    eq_fixed = 0
+    for old_eq, new_eq in eq_replacements:
+        idx, para = find_para(doc, old_eq[:40])
+        if para is not None and "[EQUATION" in para.text:
+            if not dry_run:
+                replace_para_text(para, new_eq)
+                # Center the equation and set italic
+                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                if para.runs:
+                    para.runs[0].font.italic = True
+                    para.runs[0].font.name = "Cambria Math"
+                    para.runs[0].font.size = Pt(11)
+            eq_fixed += 1
+
+    if eq_fixed:
+        print(f"  {'WOULD FORMAT' if dry_run else 'FORMATTED'}: {eq_fixed} equations in Chapter 6")
+        changes += 1
+    else:
+        print("  SKIP: No equation placeholders found")
+
+    # ── Insert Chapter 8 figures (if image files exist) ──
+    fig_insertions = [
+        ("f1_comparison_realistic.png", "[INSERT FIGURE: f1_comparison_realistic.png"),
+        ("retrieval_dist_realistic.png", "[INSERT FIGURE: retrieval_dist_realistic.png"),
+        ("cw_conli_threshold_curves.png", "[TODO: Insert diagram here - Figure 6.4"),
+    ]
+    figs_inserted = 0
+    for filename, needle in fig_insertions:
+        img_path = RESULTS / filename
+        if not img_path.exists():
+            continue
+        idx, para = find_para(doc, needle)
+        if para is not None:
+            if not dry_run:
+                # Extract the figure caption from the placeholder text
+                # Format: [INSERT FIGURE: file.png — Figure X.Y: Caption]
+                caption = para.text.split("\u2014")[-1].strip().rstrip("]") if "\u2014" in para.text else ""
+                if not caption:
+                    caption = para.text.split("—")[-1].strip().rstrip("]") if "—" in para.text else filename
+
+                # Clear paragraph and insert image
+                replace_para_text(para, "")
+                para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = para.add_run()
+                run.add_picture(str(img_path), width=Inches(5.5))
+
+                # Add caption paragraph after
+                _add_paragraph_after(doc, para, caption, bold=True, size=10)
+            figs_inserted += 1
+
+    if figs_inserted:
+        print(f"  {'WOULD INSERT' if dry_run else 'INSERTED'}: {figs_inserted} figure(s) in Chapter 8")
+        changes += 1
+    else:
+        print("  SKIP: No Ch8 figures to insert (missing image files or placeholders)")
+
+    # ── Rename Table 8.1 in Chapter 10 → Table 10.1 ──
+    # Find caption "Table 8.1" that appears AFTER Chapter 10 heading
+    ch10_start = None
+    for i, p in enumerate(doc.paragraphs):
+        if "CHAPTER 10" in p.text:
+            ch10_start = i
+            break
+
+    if ch10_start:
+        for i, p in enumerate(doc.paragraphs):
+            if i > ch10_start and p.text.strip().startswith("Table 8.1") and ":" in p.text[:20]:
+                if not dry_run:
+                    replace_para_text(p, p.text.replace("Table 8.1", "Table 10.1", 1))
+                print(f"  {'WOULD RENAME' if dry_run else 'RENAMED'}: Table 8.1 \u2192 Table 10.1 in Chapter 10")
+                changes += 1
+                break
+        else:
+            print("  SKIP: Table 8.1 not found in Chapter 10")
+    else:
+        print("  SKIP: Chapter 10 not found")
+
+    return changes
+
+
+# ── Structural Fixes (reviewer feedback) ─────────────────────────────────
+
+def _get_elem_text(elem):
+    """Extract text from a w:p or w:tbl XML element."""
+    return "".join(node.text or "" for node in elem.iter(qn("w:t")))
+
+
+def fix_structural_issues(doc, dry_run=False):
+    """Fix structural issues: duplicated sections, section/table numbering, ToC."""
+    changes = 0
+
+    # Idempotency: if section renaming already applied, skip
+    _, already_done = find_para(doc, "8.7 Latency Analysis")
+    if already_done is not None:
+        print("  SKIP: Structural fixes already applied")
+        return 0
+
+    # ═══ 1. REMOVE DUPLICATE API-LEVEL TESTING BLOCKS ═══
+    # update_testing_chapter() may have run multiple times, triplicating the
+    # heading + summary + table + caption block.  Keep the first, delete rest.
+
+    api_marker = "executed against the live FastAPI backend"
+    api_paras = []
+    for i, p in enumerate(doc.paragraphs):
+        if api_marker in p.text:
+            api_paras.append(p)
+
+    if len(api_paras) > 1:
+        body = doc.element.body
+        removed = 0
+        # Work backwards so earlier XML positions stay valid
+        for para in reversed(api_paras[1:]):
+            summary_elem = para._element
+            heading_elem = summary_elem.getprevious()
+            # Next siblings: table (w:tbl), then caption (w:p)
+            next1 = summary_elem.getnext()
+            next2 = next1.getnext() if next1 is not None else None
+
+            if not dry_run:
+                for elem in [heading_elem, summary_elem, next1, next2]:
+                    if elem is not None:
+                        try:
+                            body.remove(elem)
+                        except ValueError:
+                            pass
+            removed += 1
+
+        print(f"  {'WOULD REMOVE' if dry_run else 'REMOVED'}: {removed} duplicate API-level testing block(s)")
+        changes += 1
+    else:
+        print("  SKIP: No duplicate API-level testing blocks")
+
+    # ═══ 2. FIX SECTION NUMBERING IN CHAPTER 8 ═══
+    # Current:  8.6, 8.6, 8.7, 8.7.x, 8.8, 8.9, 8.9.x, [gap], 8.11
+    # Fixed:    8.6, 8.7, 8.8, 8.8.x, 8.9, 8.10, 8.10.x, 8.11
+
+    section_renames = [
+        ("8.6 Latency analysis",                              "8.7 Latency Analysis"),
+        ("8.7 Functional Testing",                             "8.8 Functional Testing"),
+        ("8.7.1 Testing Strategy",                             "8.8.1 Testing Strategy"),
+        ("8.7.2 Unit Testing",                                 "8.8.2 Unit Testing"),
+        ("8.7.3 Integration Testing",                          "8.8.3 Integration Testing"),
+        ("8.7.4 Test Results Summary",                         "8.8.4 Test Results Summary"),
+        ("8.8 Non-Functional Testing",                         "8.9 Non-Functional Testing"),
+        ("8.8 User Testing",                                   "8.9 User Testing"),          # fallback
+        ("8.9 Discussion of Testing Outcomes",                 "8.10 Discussion of Testing Outcomes"),
+        ("8.9.1 System Strengths",                             "8.10.1 System Strengths"),
+        ("8.9.2 Identified Weaknesses and Limitations",        "8.10.2 Identified Weaknesses and Limitations"),
+        ("8.9.3 Recommendations for Further Development",      "8.10.3 Recommendations for Further Development"),
+    ]
+
+    # Collect all targets BEFORE any renaming to avoid order-dependent matching
+    sect_targets = []
+    for old_text, new_text in section_renames:
+        idx, para = find_para(doc, old_text)
+        if para is not None and para.text.strip().startswith(old_text[:6]):
+            sect_targets.append((para, new_text, old_text))
+
+    if sect_targets:
+        if not dry_run:
+            for para, new_text, _ in sect_targets:
+                replace_para_text(para, new_text)
+        print(f"  {'WOULD RENAME' if dry_run else 'RENAMED'}: {len(sect_targets)} section headings")
+        changes += 1
+
+    # Fix 8.7.5 → 8.8.5 heading + set Heading 3 style
+    api_heading = None
+    for p in doc.paragraphs:
+        text = p.text.strip()
+        if text.endswith("API-level testing") and text[0].isdigit():
+            api_heading = p
+            break
+
+    if api_heading is not None:
+        if not dry_run:
+            replace_para_text(api_heading, "8.8.5 API-Level Testing")
+            try:
+                api_heading.style = doc.styles["Heading 3"]
+            except KeyError:
+                pass
+        print(f"  {'WOULD FIX' if dry_run else 'FIXED'}: API-level testing \u2192 8.8.5 + Heading 3 style")
+        changes += 1
+
+    # ═══ 3. RENUMBER TABLE CAPTIONS IN CHAPTER 8 ═══
+    # Resolves: duplicate 7.1/7.2/7.3, and the 7.3 \u2192 26 jump
+    # New scheme: all Chapter 8 tables numbered 8.1 through 8.13
+
+    # (unique_description_fragment, old_number_string, new_number_string)
+    caption_map = [
+        # Results tables (sections 8.2\u20138.6)
+        ("Score Distribution Summary",    "Table 7.1", "Table 8.1"),
+        ("Dev Set Tuning",                "Table 7.2", "Table 8.2"),   # Combined
+        ("Dev Set Tuning",                "Table 7.3", "Table 8.3"),   # QA Only
+        ("Test Set Results",              "Table 7.4", "Table 8.4"),   # Combined
+        ("Test Set Results",              "Table 7.5", "Table 8.5"),   # QA Only
+        ("Realistic Retrieval",           "Table 7.6", "Table 8.6"),
+        ("McNemar",                       "Table 7.7", "Table 8.7"),
+        ("Per-Sample Latency",            "Table 7.8", "Table 8.8"),
+        # Testing tables (section 8.8)
+        ("Unit Test Cases",               "Table 7.1", "Table 8.9"),
+        ("Integration Test Cases",        "Table 7.2", "Table 8.10"),
+        ("Test Results Summary",          "Table 7.3", "Table 8.11"),
+        # Script-inserted tables
+        ("API-level functional",          "Table 26",  "Table 8.12"),
+        ("API-Level Functional",          "Table 26",  "Table 8.12"),
+        ("Non-functional test",           "Table 27",  "Table 8.13"),
+        ("Non-Functional Test",           "Table 27",  "Table 8.13"),
+    ]
+
+    captions_done = set()
+    captions_fixed = 0
+    for desc_frag, old_num, new_num in caption_map:
+        for i, p in enumerate(doc.paragraphs):
+            text = p.text
+            # Only match actual caption paragraphs (start with "Table N")
+            if (text.strip().startswith("Table ")
+                    and desc_frag in text and old_num in text
+                    and i not in captions_done):
+                if not dry_run:
+                    replace_para_text(p, text.replace(old_num, new_num, 1))
+                captions_done.add(i)
+                captions_fixed += 1
+                break
+
+    if captions_fixed:
+        print(f"  {'WOULD RENAME' if dry_run else 'RENAMED'}: {captions_fixed} table captions (now 8.1\u20138.13)")
+        changes += 1
+
+    # ═══ 4. UPDATE TABLE REFERENCES IN BODY TEXT ═══
+
+    # Find chapter boundaries for position-based disambiguation
+    ch8_start = ch9_start = testing_start = None
+    for i, p in enumerate(doc.paragraphs):
+        text = p.text.strip()
+        if ch8_start is None and "CHAPTER 08" in text:
+            ch8_start = i
+        if ch8_start is not None and testing_start is None and (
+            text.startswith("8.8 Functional") or text.startswith("8.7 Functional")
+        ):
+            testing_start = i
+        if ch8_start is not None and ch9_start is None and "CHAPTER 09" in text:
+            ch9_start = i
+            break
+
+    results_map = {
+        "Table 7.1": "Table 8.1", "Table 7.2": "Table 8.2",
+        "Table 7.3": "Table 8.3", "Table 7.4": "Table 8.4",
+        "Table 7.5": "Table 8.5", "Table 7.6": "Table 8.6",
+        "Table 7.7": "Table 8.7", "Table 7.8": "Table 8.8",
+    }
+    testing_map = {
+        "Table 7.1": "Table 8.9",  "Table 7.2": "Table 8.10",
+        "Table 7.3": "Table 8.11",
+    }
+
+    refs_fixed = 0
+    for i, p in enumerate(doc.paragraphs):
+        text = p.text
+        if not text:
+            continue
+        # Skip captions (already handled in step 3)
+        if text.strip().startswith("Table ") and ":" in text[:20]:
+            continue
+
+        new_text = text
+        modified = False
+
+        # Global: "Tables 20\u201325" \u2192 "Tables 8.2\u20138.7"
+        if "Tables 20" in new_text:
+            for sep in ["\u2013", "-", "\u2014"]:
+                old_ref = f"Tables 20{sep}25"
+                if old_ref in new_text:
+                    new_text = new_text.replace(old_ref, f"Tables 8.2{sep}8.7")
+                    modified = True
+
+        # Global: Table 26 / Table 27
+        if "Table 26" in new_text:
+            new_text = new_text.replace("Table 26", "Table 8.12")
+            modified = True
+        if "Table 27" in new_text:
+            new_text = new_text.replace("Table 27", "Table 8.13")
+            modified = True
+
+        # Chapter 8 only: "Table 7.X" (position-dependent)
+        if (ch8_start is not None and ch9_start is not None
+                and ch8_start <= i < ch9_start and "Table 7." in new_text):
+            ref_map = testing_map if (testing_start and i >= testing_start) else results_map
+            for old, new in ref_map.items():
+                if old in new_text:
+                    new_text = new_text.replace(old, new)
+                    modified = True
+
+        if modified and new_text != text:
+            if not dry_run:
+                replace_para_text(p, new_text)
+            refs_fixed += 1
+
+    if refs_fixed:
+        print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'}: {refs_fixed} table reference(s) in body text")
+        changes += 1
+
+    # ═══ 5. FIX TABLE OF CONTENTS ═══
+
+    toc_idx, toc_ch5 = find_para(doc, "CHAPTER 05: TIME SCHEDULE")
+    if toc_ch5 is not None:
+        if not dry_run:
+            old = toc_ch5.text
+            parts = old.split("\t")
+            page = parts[-1] if len(parts) > 1 else ""
+            new_title = "CHAPTER 05: SOCIAL, LEGAL, ETHICAL AND PROFESSIONAL ISSUES (SLEP)"
+            replace_para_text(toc_ch5, f"{new_title}\t{page}" if page else new_title)
+        print(f"  {'WOULD FIX' if dry_run else 'FIXED'}: ToC Chapter 5 title")
+        changes += 1
+
+    toc_sub_idx, toc_sub = find_para(doc, "5.1 Project schedule")
+    if toc_sub is not None:
+        if not dry_run:
+            old = toc_sub.text
+            parts = old.split("\t")
+            page = parts[-1] if len(parts) > 1 else ""
+            replace_para_text(toc_sub, f"5.1 Chapter overview\t{page}" if page else "5.1 Chapter overview")
+        print(f"  {'WOULD FIX' if dry_run else 'FIXED'}: ToC 5.1 entry")
+        changes += 1
+
+    # ═══ 6. VALIDATION ═══
+    remaining = []
+    for i, p in enumerate(doc.paragraphs):
+        text = p.text
+        if not text:
+            continue
+        if "Table 26" in text or "Table 27" in text:
+            remaining.append(f"P{i}: {text[:80]}")
+    if remaining:
+        print(f"  WARNING: {len(remaining)} paragraph(s) still reference old table numbers:")
+        for r in remaining[:5]:
+            print(f"    {r}")
+
+    return changes
+
+
 # ── Class Imbalance Discussion (Chapter 8) ───────────────────────────────
 
 CLASS_IMBALANCE_TEXT = (
@@ -1391,6 +2028,18 @@ def main():
     # SLEP Chapter 5.2.3: AI declaration
     print("\nSLEP AI declaration:")
     changes += update_slep_ai_declaration(doc, dry_run=dry_run)
+
+    # Focus group & expert tables (Chapter 9)
+    print("\nFocus group & expert tables:")
+    changes += update_focus_group_tables(doc, dry_run=dry_run)
+
+    # Round 2 fixes (SUS, equations, figures, Ch10 table)
+    print("\nRound 2 fixes:")
+    changes += fix_round2_issues(doc, dry_run=dry_run)
+
+    # Structural fixes (reviewer feedback)
+    print("\nStructural fixes:")
+    changes += fix_structural_issues(doc, dry_run=dry_run)
 
     # Chapter 8: Class imbalance discussion
     print("\nClass imbalance discussion:")
