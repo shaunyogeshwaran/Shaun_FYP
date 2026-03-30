@@ -34,17 +34,62 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 - 24 GB RAM recommended
 - GPU auto-detected (CUDA used when available; falls back to CPU on Mac/other). Colab notebook provided for faster GPU runs
 
-## Installation
+## Quick Start (any machine)
+
+```bash
+git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
+cd Shaun_FYP
+make install        # installs pip + npm dependencies, creates .env
+# Edit .env and add your GROQ_API_KEY (free at https://console.groq.com)
+make start          # starts backend (:8000) + frontend (:5173)
+```
+
+Open **http://localhost:5173** — that's it.
+
+### Requirements
+
+| Requirement | Details |
+|---|---|
+| **Python** | 3.10+ with pip |
+| **Node.js** | 18+ with npm |
+| **RAM** | 24 GB recommended (ML models load into memory) |
+| **Disk** | ~3 GB (models auto-download from HuggingFace on first run) |
+| **GPU** | Optional — CUDA auto-detected, falls back to CPU. Colab notebook provided for faster GPU runs |
+| **Groq API key** | Optional — offline mode works without it (mock LLM responses; RAG + NLI verification still function) |
+
+### Custom Python path
+
+The Makefile auto-detects `python3`. To override:
+
+```bash
+PYTHON=/path/to/python3 make install
+PYTHON=/path/to/python3 make start
+```
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `make install` fails on pip | Ensure Python 3.10+ is on your PATH: `python3 --version` |
+| Backend won't start | Check logs: `tail /tmp/aflhr_backend.log` |
+| Frontend won't start | Check logs: `tail /tmp/aflhr_frontend.log` |
+| Port 8000/5173 in use | `make stop` first, or kill the process on that port |
+| Models downloading slowly | First run downloads ~3 GB from HuggingFace. Subsequent runs use cache |
+| MPS/Apple GPU segfault | Expected — the system auto-disables MPS and uses CPU |
+
+## Installation (step-by-step)
+
+If you prefer manual setup over `make install`:
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
    cd Shaun_FYP
    ```
 
-2. **Create a virtual environment:**
+2. **Create a virtual environment (optional but recommended):**
    ```bash
-   python -m venv venv
+   python3 -m venv venv
    source venv/bin/activate  # macOS/Linux
    # or: venv\Scripts\activate  # Windows
    ```
