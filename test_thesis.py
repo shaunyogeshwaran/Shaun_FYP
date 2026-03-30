@@ -3,6 +3,10 @@
 AFLHR Lite — Functional & Non-Functional Testing Suite
 Produces thesis-ready results for Chapter 8 sections 8.7 and 8.8.
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The test case design and
+acceptance criteria are the author's own work.
+
 Usage:
     python test_thesis.py              # Run all tests (API must be running on :8000)
     python test_thesis.py --skip-v2    # Skip v2 tests (faster, avoids v2 engine load)

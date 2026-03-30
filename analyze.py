@@ -3,6 +3,10 @@ AFLHR Lite - Results Analysis and Visualization
 Generates comparison tables, plots, confusion matrices,
 and statistical tests for the thesis.
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The analysis methodology
+and statistical test selection are the author's own work.
+
 Usage:
   python analyze.py                        # analyse test set, all tasks
   python analyze.py --task qa              # QA only
