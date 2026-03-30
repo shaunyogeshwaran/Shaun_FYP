@@ -1284,6 +1284,53 @@ def update_slep_ai_declaration(doc, dry_run=False):
     return changes
 
 
+# ── Class Imbalance Discussion (Chapter 8) ───────────────────────────────
+
+CLASS_IMBALANCE_TEXT = (
+    "The HaluEval benchmark used in this study is near-perfectly balanced: "
+    "the dev set contains 7,018 hallucinated and 6,982 valid samples (50.1\u2009% "
+    "vs 49.9\u2009%), while the test set contains 3,002 hallucinated and 2,998 "
+    "valid samples (50.0\u2009% vs 50.0\u2009%). This balance holds across both QA "
+    "and Summarisation tasks. Because neither class is underrepresented, "
+    "no resampling, class weighting, or cost-sensitive adjustments were "
+    "required. F1 score remains an appropriate primary metric under these "
+    "conditions, as it does not suffer from the optimistic bias that accuracy "
+    "exhibits on imbalanced datasets."
+)
+
+CLASS_IMBALANCE_NEEDLE = "HaluEval benchmark used in this study is near-perfectly balanced"
+
+
+def update_class_imbalance(doc, dry_run=False):
+    """Insert or update class imbalance paragraph in Chapter 8 discussion."""
+    changes = 0
+
+    # Check if already present
+    idx, existing = find_para(doc, CLASS_IMBALANCE_NEEDLE)
+    if existing is not None:
+        if not dry_run:
+            replace_para_text(existing, CLASS_IMBALANCE_TEXT)
+        print(f"  {'WOULD UPDATE' if dry_run else 'UPDATED'} P{idx}: Class imbalance discussion (already present)")
+        changes += 1
+        return changes
+
+    # Find the 8.9 Discussion heading — insert before it
+    idx, heading = find_para(doc, "8.9 Discussion")
+    if heading is None:
+        # Try alternate
+        idx, heading = find_para(doc, "Discussion")
+    if heading is None:
+        print("  SKIP: Could not find Discussion heading in Chapter 8")
+        return 0
+
+    if not dry_run:
+        new_p = heading.insert_paragraph_before(CLASS_IMBALANCE_TEXT)
+        new_p.style = doc.styles['Normal']
+    print(f"  {'WOULD INSERT' if dry_run else 'INSERTED'} before P{idx}: Class imbalance discussion in Ch8")
+    changes += 1
+    return changes
+
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 def main():
@@ -1344,6 +1391,10 @@ def main():
     # SLEP Chapter 5.2.3: AI declaration
     print("\nSLEP AI declaration:")
     changes += update_slep_ai_declaration(doc, dry_run=dry_run)
+
+    # Chapter 8: Class imbalance discussion
+    print("\nClass imbalance discussion:")
+    changes += update_class_imbalance(doc, dry_run=dry_run)
 
     # Save
     if args.apply:
