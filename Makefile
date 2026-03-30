@@ -1,4 +1,4 @@
-PYTHON := /opt/anaconda3/bin/python
+PYTHON ?= $(shell command -v python3 2>/dev/null || echo python)
 PID_BACKEND := /tmp/aflhr_backend.pid
 PID_FRONTEND := /tmp/aflhr_frontend.pid
 BACKEND_PORT := 8000
