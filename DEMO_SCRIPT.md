@@ -1,17 +1,14 @@
-# AFLHR Lite — Complete Study Guide & Demo Script
+# Cw-CONLI — Complete Study Guide & Demo Script
 
-This document is a self-contained guide to the AFLHR Lite (Adaptive Framework for LLM Hallucination Reduction) project. It explains every concept from scratch, why each design decision was made, and includes a demo script for a supervisor meeting. If you've forgotten everything, start from the top.
+This document is a self-contained guide to the entire project. It explains every concept from scratch, why each design decision was made, and includes a demo script for a supervisor meeting. If you've forgotten everything, start from the top.
 
 ---
 
 ## TABLE OF CONTENTS
 
 1. [The Problem: LLM Hallucinations](#1-the-problem-llm-hallucinations)
-   - [1.1 The Research Gap](#11-the-research-gap)
-   - [1.2 Does the Solution Actually Work?](#12-does-the-solution-actually-work)
-   - [1.3 SOTA Comparison](#13-how-does-this-compare-to-state-of-the-art-sota)
 2. [Background Concepts](#2-background-concepts)
-3. [The Solution: AFLHR Lite Pipeline](#3-the-solution-aflhr-lite-pipeline)
+3. [The Solution: Cw-CONLI Pipeline](#3-the-solution-cw-conli-pipeline)
 4. [v2 Improvements: What Changed and Why](#4-v2-improvements-what-changed-and-why)
 5. [Experiment Design](#5-experiment-design)
 6. [Results & What They Mean](#6-results--what-they-mean)
@@ -35,41 +32,6 @@ Large Language Models (GPT, Llama, etc.) generate text by predicting the most li
 **Why it matters:** If you're building a system that answers questions using an LLM — a chatbot, a search assistant, a medical Q&A tool — you need to know when the LLM is making things up. The cost of a wrong answer can range from embarrassing to dangerous.
 
 **The research question:** Can we build a lightweight, local system that detects hallucinations by checking whether the LLM's output is actually supported by retrieved evidence, and can we make that detection *adaptive* based on how good the evidence is?
-
-### 1.1 The Research Gap
-
-Existing NLI-based verification frameworks (CoNLI and its derivatives) apply a **uniform, static threshold** regardless of how good the retrieved evidence is. Two separate bodies of work exist:
-
-- **Retrieval calibration** (e.g., SGIC) — improving the quality of retrieved passages
-- **NLI verification** (e.g., HALT-RAG) — improving how entailment is judged
-
-But **nobody had connected these two layers**. The verifier has no awareness of whether it's judging against a perfect passage (cosine ~0.9) or a barely relevant one (~0.3) — yet it applies the same mathematical pass/fail criteria. This is the "evidence blindness" problem.
-
-Cw-CONLI fills this gap by using the retrieval confidence score as a dynamic cost-sensitive proxy that modulates verification strictness at inference time.
-
-### 1.2 Does the Solution Actually Work?
-
-**Yes — the pipeline detects hallucinations.** Every NLI-based condition (C2 and C3) goes from F1 = 0.0 (no detection) to F1 ≈ 0.70. The system catches hallucinations.
-
-**Does the *adaptive* threshold beat the *static* one?** It depends on the retrieval environment:
-
-- **Standard benchmark (HaluEval per-sample): No.** C3 and C2 converge (p = 1.0). The benchmark gives each sample its own gold passage, so retrieval scores cluster tightly with no variance for adaptive thresholds to exploit.
-- **Realistic retrieval (shared FAISS index): Yes, on over-flagging.** McNemar's p = 0.000014 (significant). C2 flags 100% of correct responses — functionally useless. C3 Sqrt reduces this to 44.9% — a system that flags 45% needs human review but is workable. C2 wins on raw F1 (0.6701 vs 0.6414) only because it catches everything by rejecting everything.
-
-**The honest viva narrative:** The pipeline reduces hallucinations. The adaptive threshold's additional benefit emerges in realistic conditions where retrieval quality varies — which is the real-world deployment scenario.
-
-### 1.3 How Does This Compare to State-of-the-Art (SOTA)?
-
-SOTA = "State of the Art" — the best currently published results for a given task.
-
-| System | Approach | HaluEval QA F1 | HaluEval Summ F1 | Key difference |
-|--------|----------|----------------|-------------------|---------------|
-| **AFLHR Lite (ours)** | Single NLI model + adaptive threshold | 0.770 | 0.663 | Lightweight, API-friendly, CPU-runnable |
-| **HALT-RAG (2025)** | NLI ensemble + lexical features + 5-fold OOF | 0.979 | 0.776 | Multi-model, needs training, heavier |
-| **SGIC (2025)** | Self-guided iterative calibration during generation | — | — | Complementary (operates pre-generation) |
-| **LUMINA (2025)** | White-box context-knowledge signal analysis | — | — | Requires transformer internals access |
-
-Our single-model approach is competitive for a BSc project — HALT-RAG uses multi-model ensembles with far more compute budget. SGIC and LUMINA are complementary, not competing: SGIC improves generation quality (Layer 1), LUMINA probes internal states (white-box), while Cw-CONLI verifies post-generation (Layer 2, black-box).
 
 ---
 
@@ -144,7 +106,7 @@ This is relevant because the NLI model's raw probabilities may not be well-calib
 
 ---
 
-## 3. The Solution: AFLHR Lite Pipeline
+## 3. The Solution: Cw-CONLI Pipeline
 
 ### 3.1 The four-stage pipeline
 
@@ -442,21 +404,13 @@ Navigate to `/explore`. Enable v2. Click **Run All**.
 
 > This batch-runs 7 queries across different knowledge domains. You can see Westminster queries getting verified, the distractor query about Sri Lanka's climate getting mixed results, and the off-topic query getting flagged. The summary stats show the average retrieval and NLI scores.
 
-### Demo 7 — Results discussion (4 min)
+### Demo 7 — Results discussion (3 min)
 
-> First: does the pipeline work? Yes. Without NLI verification (C1), we detect nothing — F1 = 0.0. With NLI (C2/C3), we get F1 ≈ 0.70. The system catches hallucinations.
->
-> Second: does the adaptive threshold beat the static one? On the standard benchmark, they converge — McNemar's p = 1.0. This is because HaluEval gives each sample its own gold passage, so retrieval scores are artificially tight. There's no variance for adaptive thresholds to exploit.
->
-> But in the realistic experiment — where we built a shared FAISS index from 10,000 passages and forced the retriever to search across all of them — the difference is significant (p = 0.000014). The static threshold flags 100% of correct responses as hallucinated. That's worse than having no verifier at all. The adaptive threshold (C3 Sqrt) reduces over-flagging to 45% — still high, but usable.
->
-> The v2 engineering is the other major contribution: sliding-window NLI partially fixes summarisation (from broken to F1 ≈ 0.663), and claim decomposition catches partial hallucinations that whole-response NLI misses.
->
-> For context against SOTA: HALT-RAG achieves F1 = 0.979 on QA using NLI ensembles — but that's a multi-model system with training overhead. Our single-model approach gets 0.770 on QA, which is competitive for a lightweight, CPU-runnable pipeline.
+> The full evaluation used HaluEval — 20K samples. On the standard benchmark, C3 and C2 converge — McNemar's p = 1.0 — because per-sample retrieval doesn't give enough variance for adaptive thresholds. But the realistic experiment with shared-index retrieval shows significant divergence (p = 0.000014): C2 flags 100% of correct responses, while C3 Sqrt reduces that to 45%. The v2 engineering — windowed NLI, decomposition, BGE — is what really moved the needle: summarisation went from broken (99% FPR) to F1 ≈ 0.663.
 
 ### Demo 8 — What's next (1 min)
 
-> The research gap — evidence blindness in NLI verification — is real and validated. The adaptive threshold doesn't improve F1 on a controlled benchmark, but it produces a usable system in realistic conditions where static thresholds break completely. Future work: NLI ensembles (like HALT-RAG), ONNX Runtime for latency, and testing on benchmarks with natural retrieval diversity.
+> Code, experiments, and thesis are complete. The key narrative: v2 engineering fixes real pipeline bugs (truncation, semantic illusion), and the realistic experiment reveals where adaptive thresholds add value — when retrieval quality varies, which is the real-world case.
 
 ---
 
@@ -501,8 +455,6 @@ Navigate to `/explore`. Enable v2. Click **Run All**.
 
 | Term | Meaning |
 |------|---------|
-| AFLHR Lite | Adaptive Framework for LLM Hallucination Reduction — the project/system |
-| SOTA | State of the Art — best published results for a task |
 | RAG | Retrieval-Augmented Generation — feed retrieved docs to the LLM |
 | NLI | Natural Language Inference — premise/hypothesis entailment classification |
 | FAISS | Facebook AI Similarity Search — vector similarity library |
