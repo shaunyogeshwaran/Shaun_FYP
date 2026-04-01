@@ -6,7 +6,7 @@ const navItems = [
   { path: '/', label: 'Verify' },
   { path: '/explore', label: 'Explore' },
   { path: '/about', label: 'How It Works' },
-  { href: 'http://localhost:4000', label: 'Docs', external: true },
+  { href: import.meta.env.VITE_DOCS_URL || 'http://localhost:4000', label: 'Docs', external: true },
 ]
 
 export default function Header({ health }) {

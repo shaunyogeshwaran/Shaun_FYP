@@ -8,7 +8,7 @@ const config = {
 
   future: { v4: true },
 
-  url: 'http://localhost:4000',
+  url: process.env.DOCS_URL || 'http://localhost:4000',
   baseUrl: '/',
 
   onBrokenLinks: 'warn',
@@ -49,7 +49,7 @@ const config = {
             label: 'Documentation',
           },
           {
-            href: 'http://localhost:5173',
+            href: process.env.APP_URL || 'http://localhost:5173',
             label: '← Back to App',
             position: 'right',
           },
