@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'
 
-const API = ''
+const API = import.meta.env.VITE_API_URL || ''
 
 const BATCH_QUERIES = [
   { query: 'When was the University of Westminster founded?', category: 'Westminster' },

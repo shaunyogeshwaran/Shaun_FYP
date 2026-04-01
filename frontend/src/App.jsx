@@ -8,7 +8,7 @@ import ExplorePage from './pages/ExplorePage'
 import AboutPage from './pages/AboutPage'
 import './styles/global.css'
 
-const API = ''
+const API = import.meta.env.VITE_API_URL || ''
 
 export default function App() {
   const [health, setHealth] = useState(null)

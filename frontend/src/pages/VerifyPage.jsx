@@ -13,7 +13,7 @@ import VerdictStamp from '../components/VerdictStamp'
 import DocumentCard from '../components/DocumentCard'
 import ClaimBreakdown from '../components/ClaimBreakdown'
 
-const API = ''
+const API = import.meta.env.VITE_API_URL || ''
 
 const SUGGESTED_QUERIES = [
   'When was the University of Westminster founded?',

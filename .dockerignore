@@ -1,0 +1,10 @@
+frontend/
+data/
+results/
+References/
+__pycache__/
+*.pyc
+.env
+.git/
+*.docx
+*.ipynb
