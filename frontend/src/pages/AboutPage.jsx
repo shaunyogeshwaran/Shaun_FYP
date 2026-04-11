@@ -1,3 +1,6 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The pipeline walkthrough
+// design and educational content are the author's own work.
 import { motion } from 'framer-motion'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'

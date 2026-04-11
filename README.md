@@ -8,15 +8,15 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Results
 
-| Metric | v1 | v2 (standard) | v2 (realistic) |
-|--------|-----|---------------|----------------|
-| **Combined F1 (best C3)** | — | 0.6998 | 0.6558 |
-| **QA F1** | 0.770 | 0.770 (C2 = C3) | — |
-| **QA Over-flagging** | 13.6% | **11.2%** (C3 Tiered) | — |
-| **Summarisation** | Broken (99%+ FPR) | **F1 ≈ 0.663** (fixed) | — |
-| **Realistic FPR (C2 → C3 Sqrt)** | — | — | **100% → 44.9%** |
-| **C3 vs C2 significant?** | No (p = 0.25) | No (p = 1.0) | **Yes (p = 0.000014)** |
-| **Calibration** | None | T = 10.0 at boundary (disabled) | — |
+| Metric | v2 (standard) | v2 (realistic) |
+|--------|---------------|----------------|
+| **Combined F1 (best C3)** | 0.6998 | 0.6558 |
+| **QA F1** | 0.770 (C2 = C3) | — |
+| **QA Over-flagging** | **11.2%** (C3 Tiered) | — |
+| **Summarisation F1** | **≈ 0.663** (windowed NLI fixed 99% FPR) | — |
+| **Realistic FPR (C2 → C3 Sqrt)** | — | **100% → 44.9%** |
+| **C3 vs C2 significant?** | No (p = 1.0) | **Yes (p = 0.000014)** |
+| **Calibration** | T = 10.0 at boundary (disabled) | — |
 
 **Key finding:** On HaluEval's standard per-sample retrieval, C3 and C2 converge to the same operating point (McNemar's p = 1.0) — retrieval scores cluster too tightly for adaptive thresholds to differentiate. Under **realistic shared-index retrieval**, the difference is significant (p = 1.4×10⁻⁵): C2 flags 100% of correct responses while C3 Sqrt reduces over-flagging to 44.9%. The primary contribution is **v2 engineering** — sliding-window NLI fixes summarisation (99% FPR → functional), claim decomposition catches partial hallucinations, and BGE embeddings improve retrieval fidelity.
 

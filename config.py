@@ -1,6 +1,10 @@
 """
 AFLHR Lite - Configuration Module
 Centralized configuration, model IDs, and knowledge base.
+
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The model selection,
+threshold configuration, and hyperparameter ranges are the author's own work.
 """
 
 import os

@@ -15,8 +15,8 @@ langchain-groq>=0.1.0
 
 
 # API
-fastapi>=0.115.0
-uvicorn>=0.34.0
+fastapi>=0.100.0
+uvicorn>=0.20.0
 
 # Utilities
 python-dotenv>=1.0.0

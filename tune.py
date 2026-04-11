@@ -3,6 +3,10 @@ AFLHR Lite - Grid Search Hyperparameter Tuning
 Sweeps threshold parameters for C2 and C3 on the dev set
 using pre-computed scores (no model inference needed).
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The grid search
+methodology and threshold optimization strategy are the author's own work.
+
 Usage:
   python tune.py                        # tune on all tasks
   python tune.py --task qa              # tune on QA only

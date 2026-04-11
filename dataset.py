@@ -5,6 +5,10 @@ Loads HaluEval QA and Summarization subsets and splits into dev/test sets.
 HaluEval structure (per sample):
   QA:            knowledge, question, answer, hallucination ("yes"/"no")
   Summarization: document, summary, hallucination ("yes"/"no")
+
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The dataset selection,
+loading strategy, and split methodology are the author's own work.
 """
 
 import random

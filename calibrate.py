@@ -5,6 +5,10 @@ Collects raw 3-class logits from dev set NLI runs and fits a single
 temperature parameter T that minimizes negative log-likelihood.
 Standard approach from Guo et al. (2017) "On Calibration of Modern Neural Networks".
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The calibration
+methodology and temperature scaling approach are the author's own work.
+
 Usage:
   python calibrate.py --split dev
   python calibrate.py --split dev --limit 500   # faster dev run

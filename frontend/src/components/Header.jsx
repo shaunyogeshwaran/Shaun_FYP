@@ -1,3 +1,6 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The navigation design
+// and layout are the author's own work.
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'
@@ -6,7 +9,6 @@ const navItems = [
   { path: '/', label: 'Verify' },
   { path: '/explore', label: 'Explore' },
   { path: '/about', label: 'How It Works' },
-  { href: import.meta.env.VITE_DOCS_URL || 'http://localhost:4000', label: 'Docs', external: true },
 ]
 
 export default function Header({ health }) {
@@ -83,29 +85,6 @@ export default function Header({ health }) {
         {/* Navigation */}
         <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {navItems.map(item => {
-            if (item.external) {
-              return (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontFamily: fonts.body,
-                    fontSize: 13,
-                    fontWeight: 400,
-                    color: colors.textSecondary,
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    background: 'transparent',
-                    transition: 'all 0.2s ease',
-                    textDecoration: 'none',
-                  }}
-                >
-                  {item.label} ↗
-                </a>
-              )
-            }
             const isActive = location.pathname === item.path
             return (
               <Link

@@ -1,3 +1,6 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The threshold control
+// panel design is the author's own work.
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '../ThemeContext'

@@ -2,6 +2,10 @@
 """
 AFLHR v2 - Automated Experiment Pipeline
 
+AI Disclosure: Development of this module was assisted by AI tools
+for code structuring, debugging, and refactoring. The experiment
+pipeline orchestration and workflow design are the author's own work.
+
 Runs the full v2 workflow end-to-end:
   1. Calibrate temperature on dev set
   2. Precompute v2 scores (dev + test)

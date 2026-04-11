@@ -1,3 +1,6 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The gauge visualization
+// design is the author's own work.
 import { useEffect, useState } from 'react'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'

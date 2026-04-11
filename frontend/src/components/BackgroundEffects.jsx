@@ -1,3 +1,6 @@
+// AI Disclosure: Development of this component was assisted by AI tools
+// for code structuring, debugging, and refactoring. The visual effects
+// design is the author's own work.
 import { useTheme } from '../ThemeContext'
 
 /**
