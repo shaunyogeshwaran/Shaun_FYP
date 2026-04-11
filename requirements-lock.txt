@@ -13,6 +13,10 @@ langchain==1.0.1
 langchain-community==0.4
 langchain-groq==1.1.1
 
+# API
+fastapi==0.115.11
+uvicorn==0.34.3
+
 # Utilities
 python-dotenv==1.1.0
 numpy==2.1.3

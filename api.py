@@ -14,7 +14,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import threading
@@ -118,54 +118,57 @@ class VerifyResponse(BaseModel):
 
 @app.post("/api/verify", response_model=VerifyResponse)
 def verify(req: VerifyRequest):
-    engine = get_v2_engine() if req.v2_mode else engine_v1
+    try:
+        engine = get_v2_engine() if req.v2_mode else engine_v1
 
-    # Run the standard pipeline (retrieve + generate + single-pass verify + verdict)
-    result = engine.run_pipeline(
-        query=req.query,
-        pivot=req.pivot,
-        strict_threshold=req.strict_threshold,
-        lenient_threshold=req.lenient_threshold,
-        offline_mode=req.offline_mode if GROQ_API_KEY else True,
-    )
-
-    # v2: also run decomposed verification for the per-claim breakdown
-    nli_score = result["nli_score"]
-    nli_method = "whole"
-    n_claims = 1
-    per_claim = []
-
-    if req.v2_mode:
-        premise = result["retrieval"]["context"]
-        hypothesis = result["generation"]
-        decomp = engine.verify_decomposed(premise=premise, hypothesis=hypothesis)
-        nli_score = decomp["score"]
-        nli_method = "decomposed"
-        n_claims = decomp["n_claims"]
-        per_claim = [
-            ClaimScore(claim=c["claim"], score=round(c["score"], 4))
-            for c in decomp["per_claim"]
-        ]
-        # Recompute verdict with decomposed score
-        result["verdict"] = engine.calculate_verdict(
-            retrieval_score=result["retrieval"]["retrieval_score"],
-            nli_score=nli_score,
+        # Run the standard pipeline (retrieve + generate + single-pass verify + verdict)
+        result = engine.run_pipeline(
+            query=req.query,
             pivot=req.pivot,
             strict_threshold=req.strict_threshold,
             lenient_threshold=req.lenient_threshold,
+            offline_mode=req.offline_mode if GROQ_API_KEY else True,
         )
 
-    return VerifyResponse(
-        query=result["query"],
-        retrieval=result["retrieval"],
-        generation=result["generation"],
-        nli_score=nli_score,
-        verdict=result["verdict"],
-        version="v2" if req.v2_mode else "v1",
-        nli_method=nli_method,
-        n_claims=n_claims,
-        per_claim=per_claim,
-    )
+        # v2: also run decomposed verification for the per-claim breakdown
+        nli_score = result["nli_score"]
+        nli_method = "whole"
+        n_claims = 1
+        per_claim = []
+
+        if req.v2_mode:
+            premise = result["retrieval"]["context"]
+            hypothesis = result["generation"]
+            decomp = engine.verify_decomposed(premise=premise, hypothesis=hypothesis)
+            nli_score = decomp["score"]
+            nli_method = "decomposed"
+            n_claims = decomp["n_claims"]
+            per_claim = [
+                ClaimScore(claim=c["claim"], score=round(c["score"], 4))
+                for c in decomp["per_claim"]
+            ]
+            # Recompute verdict with decomposed score
+            result["verdict"] = engine.calculate_verdict(
+                retrieval_score=result["retrieval"]["retrieval_score"],
+                nli_score=nli_score,
+                pivot=req.pivot,
+                strict_threshold=req.strict_threshold,
+                lenient_threshold=req.lenient_threshold,
+            )
+
+        return VerifyResponse(
+            query=result["query"],
+            retrieval=result["retrieval"],
+            generation=result["generation"],
+            nli_score=nli_score,
+            verdict=result["verdict"],
+            version="v2" if req.v2_mode else "v1",
+            nli_method=nli_method,
+            n_claims=n_claims,
+            per_claim=per_claim,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
 
 
 @app.get("/api/health")
