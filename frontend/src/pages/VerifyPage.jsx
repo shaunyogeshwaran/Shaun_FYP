@@ -99,7 +99,14 @@ export default function VerifyPage() {
           v2_mode: v2Mode,
         }),
       })
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
+      if (!res.ok) {
+        let detail = `API error: ${res.status}`
+        try {
+          const err = await res.json()
+          if (err?.detail) detail = err.detail
+        } catch (_) { /* body wasn't JSON — keep status message */ }
+        throw new Error(detail)
+      }
       const data = await res.json()
       setPipelineStage('verdict')
       await sleep(300)

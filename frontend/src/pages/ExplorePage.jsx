@@ -42,7 +42,14 @@ export default function ExplorePage() {
             v2_mode: v2Mode,
           }),
         })
-        if (!res.ok) throw new Error(`${res.status}`)
+        if (!res.ok) {
+          let detail = `${res.status}`
+          try {
+            const err = await res.json()
+            if (err?.detail) detail = err.detail
+          } catch (_) { /* non-JSON body */ }
+          throw new Error(detail)
+        }
         const data = await res.json()
         setResults(prev => [...prev, { ...BATCH_QUERIES[i], result: data, error: null }])
       } catch (e) {

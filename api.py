@@ -68,6 +68,7 @@ _v2_lock = threading.Lock()
 
 
 _startup_error: str | None = None
+_v2_load_error: str | None = None
 
 
 @app.on_event("startup")
@@ -83,13 +84,29 @@ def startup():
 
 
 def get_v2_engine():
-    """Lazy-load v2 engine on first v2 request (thread-safe)."""
-    global engine_v2
+    """Lazy-load v2 engine on first v2 request (thread-safe).
+
+    Raises HTTPException(503) with a structured detail if load fails.
+    Caches the failure so repeat requests return fast instead of re-downloading.
+    """
+    global engine_v2, _v2_load_error
     if engine_v2 is not None:
         return engine_v2
+    if _v2_load_error is not None:
+        raise HTTPException(
+            status_code=503,
+            detail=f"v2 engine unavailable: {_v2_load_error}. Uncheck 'v2 mode' to use the v1 baseline.",
+        )
     with _v2_lock:
-        if engine_v2 is None:
-            print("Loading AFLHR Engine (v2: windowed + decomposition + BGE)...")
+        if engine_v2 is not None:
+            return engine_v2
+        if _v2_load_error is not None:
+            raise HTTPException(
+                status_code=503,
+                detail=f"v2 engine unavailable: {_v2_load_error}. Uncheck 'v2 mode' to use the v1 baseline.",
+            )
+        print("Loading AFLHR Engine (v2: windowed + decomposition + BGE)...")
+        try:
             engine_v2 = AFLHREngine(
                 use_windowed_nli=True,
                 use_decomposition=True,
@@ -97,7 +114,14 @@ def get_v2_engine():
                 use_bge_embeddings=True,
             )
             print("Engine v2 ready.")
-    return engine_v2
+            return engine_v2
+        except Exception as e:
+            traceback.print_exc()
+            _v2_load_error = str(e)
+            raise HTTPException(
+                status_code=503,
+                detail=f"v2 engine failed to load: {e}. Uncheck 'v2 mode' to use the v1 baseline.",
+            )
 
 
 class VerifyRequest(BaseModel):
