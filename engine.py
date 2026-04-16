@@ -266,8 +266,8 @@ class AFLHREngine:
             response = self.llm.invoke(messages)
             return response.content
         except Exception as e:
-            print(f"Generation error: {e}")
-            return f"Error generating response: {str(e)}"
+            print(f"Generation error (falling back to offline): {e}")
+            return OFFLINE_MOCK_RESPONSE
 
     # ==================================================================
     # NLI Verification (v1 and v2)

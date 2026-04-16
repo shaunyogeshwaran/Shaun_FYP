@@ -16,7 +16,9 @@ load_dotenv()
 # =============================================================================
 # API Configuration
 # =============================================================================
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+_raw_key = os.getenv("GROQ_API_KEY", "")
+# Treat placeholder / blank values as unset so offline mode kicks in
+GROQ_API_KEY = _raw_key if _raw_key.startswith("gsk_") else None
 
 # =============================================================================
 # Model IDs
