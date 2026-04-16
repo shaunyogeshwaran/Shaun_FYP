@@ -1,6 +1,9 @@
 VENV := venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
+NPM := $(VENV)/bin/npm
+NPX := $(VENV)/bin/npx
+NODE_VERSION := 20.18.0
 PID_BACKEND := /tmp/aflhr_backend.pid
 PID_FRONTEND := /tmp/aflhr_frontend.pid
 PID_DOCS := /tmp/aflhr_docs.pid
@@ -13,7 +16,7 @@ DOCS_PORT := 4000
 # ── Default ────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
-	@echo "  make install    Install all dependencies (creates venv)"
+	@echo "  make install    Install everything (Python venv + Node.js + all deps)"
 	@echo "  make start      Start backend + frontend + docs"
 	@echo "  make stop       Stop backend + frontend + docs"
 	@echo "  make restart    Stop then start"
@@ -22,29 +25,26 @@ help:
 	@echo "  make test-all   Run all tests including slow integration (~60s)"
 	@echo "  make smoke      Smoke test (precompute 20 samples)"
 	@echo ""
+	@echo "  Prerequisites: Python 3.10+ and make (Node.js is installed automatically)"
+	@echo ""
 
 # ── Install ────────────────────────────────────────────────────────────────────
 install:
 	@echo "Checking prerequisites..."
 	@command -v python3 >/dev/null 2>&1 || (echo "Error: python3 not found. Install Python 3.10+ first." && exit 1)
-	@command -v node >/dev/null 2>&1 || (echo "Error: node not found. Install Node.js 20+ first." && exit 1)
-	@command -v npm >/dev/null 2>&1 || (echo "Error: npm not found. Install Node.js 20+ first." && exit 1)
-	@NODE_MAJOR=$$(node -e "console.log(process.version.split('.')[0].slice(1))"); \
-		if [ "$$NODE_MAJOR" -lt 20 ]; then \
-			echo "Error: Node.js >= 20 required (found $$(node --version)). Update at https://nodejs.org"; \
-			exit 1; \
-		fi
-	@echo "Fixing npm cache permissions..."
-	@mkdir -p ~/.npm && chown -R $$(whoami) ~/.npm 2>/dev/null || true
 	@echo "Creating Python virtual environment..."
 	python3 -m venv $(VENV)
-	@echo "Installing Python dependencies..."
+	@echo "Upgrading pip..."
 	$(PIP) install --upgrade pip
+	@echo "Installing Node.js $(NODE_VERSION) into venv (via nodeenv)..."
+	$(PIP) install nodeenv
+	$(PYTHON) -m nodeenv --node=$(NODE_VERSION) --python-virtualenv --prebuilt $(VENV)
+	@echo "Installing Python dependencies..."
 	$(PIP) install -r requirements.txt
 	@echo "Installing frontend dependencies..."
-	cd frontend && rm -rf node_modules && npm cache clean --force 2>/dev/null; npm install --no-fund --no-audit
+	cd frontend && rm -rf node_modules && $(NPM) install --no-fund --no-audit
 	@echo "Installing docs dependencies..."
-	cd docs && rm -rf node_modules && npm cache clean --force 2>/dev/null; npm install --no-fund --no-audit
+	cd docs && rm -rf node_modules && $(NPM) install --no-fund --no-audit
 	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
 	@echo ""
 	@echo "  ✓ Installation complete. Run: make start"
@@ -62,13 +62,13 @@ start: stop
 		[ $$i -eq 30 ] && echo "  ✗ Backend failed — check: tail /tmp/aflhr_backend.log"; \
 	done
 	@echo "Starting frontend on port $(FRONTEND_PORT)..."
-	@cd frontend && npm run dev -- --port $(FRONTEND_PORT) --strictPort > /tmp/aflhr_frontend.log 2>&1 & echo $$! > $(PID_FRONTEND)
+	@cd frontend && $(NPM) run dev -- --port $(FRONTEND_PORT) --strictPort > /tmp/aflhr_frontend.log 2>&1 & echo $$! > $(PID_FRONTEND)
 	@sleep 4
 	@grep -q "Local:" /tmp/aflhr_frontend.log \
 		&& echo "  ✓ Frontend ready" \
 		|| (echo "  ✗ Frontend failed — check: tail /tmp/aflhr_frontend.log" && cat /tmp/aflhr_frontend.log)
 	@echo "Starting docs on port $(DOCS_PORT)..."
-	@cd docs && npx docusaurus start --port $(DOCS_PORT) --no-open > /tmp/aflhr_docs.log 2>&1 & echo $$! > $(PID_DOCS)
+	@cd docs && $(NPX) docusaurus start --port $(DOCS_PORT) --no-open > /tmp/aflhr_docs.log 2>&1 & echo $$! > $(PID_DOCS)
 	@sleep 4
 	@curl -sf http://localhost:$(DOCS_PORT) > /dev/null 2>&1 \
 		&& echo "  ✓ Docs ready" \
