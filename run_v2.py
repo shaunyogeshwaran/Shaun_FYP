@@ -16,7 +16,7 @@ Runs the full v2 workflow end-to-end:
 Usage:
   python run_v2.py                    # full pipeline
   python run_v2.py --limit 50         # smoke test with 50 samples
-  python run_v2.py --skip-calibrate   # skip calibration (use existing)
+  python run_v2.py --calibrate         # include calibration step (off by default — T=10 boundary)
   python run_v2.py --skip-precompute  # skip precompute (use existing CSVs)
   python run_v2.py --realistic        # also run realistic retrieval experiment
 """
@@ -82,8 +82,10 @@ def main():
     parser = argparse.ArgumentParser(description="AFLHR v2 Full Pipeline")
     parser.add_argument("--limit", type=int, default=None,
                         help="Limit samples (for smoke testing)")
+    parser.add_argument("--calibrate", action="store_true",
+                        help="Run calibration step (off by default — T=10 boundary issue)")
     parser.add_argument("--skip-calibrate", action="store_true",
-                        help="Skip calibration step")
+                        help="(Deprecated) Calibration is now off by default")
     parser.add_argument("--skip-precompute", action="store_true",
                         help="Skip precomputation step")
     parser.add_argument("--skip-tune", action="store_true",
@@ -96,8 +98,8 @@ def main():
     total_start = time.time()
     timings = {}
 
-    # ---- Step 1: Calibrate ----
-    if not args.skip_calibrate:
+    # ---- Step 1: Calibrate (opt-in — T=10 boundary means it doesn't help) ----
+    if args.calibrate:
         t = run(
             f"python calibrate.py --split dev{limit_flag}",
             "Step 1/5: Calibrate NLI temperature on dev set",
