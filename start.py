@@ -99,6 +99,13 @@ def main():
     env = os.environ.copy()
     env["PATH"] = os.path.join(VENV, "bin") + ":" + env.get("PATH", "")
     env["npm_config_cache"] = os.path.join(VENV, ".npm-cache")
+    # Use certifi certs so urllib-based downloads (e.g. NLTK) work on macOS
+    try:
+        import certifi
+        env.setdefault("SSL_CERT_FILE", certifi.where())
+        env.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
+    except ImportError:
+        pass
 
     # Stop previous instances
     stop()
