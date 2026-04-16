@@ -50,15 +50,16 @@ def wait_for_port(port, timeout=60):
 
 
 def wait_for_backend(port, timeout=120):
-    """Wait until the backend health endpoint responds (engine fully loaded)."""
+    """Wait until the backend health endpoint confirms the engine is loaded."""
+    import json
     import urllib.request
-    import urllib.error
     url = f"http://127.0.0.1:{port}/api/health"
     start = time.time()
     while time.time() - start < timeout:
         try:
             with urllib.request.urlopen(url, timeout=3) as r:
-                if r.status == 200:
+                data = json.loads(r.read())
+                if data.get("engine_v1_loaded"):
                     return True
         except Exception:
             pass
