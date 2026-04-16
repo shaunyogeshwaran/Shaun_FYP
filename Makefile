@@ -37,7 +37,8 @@ install:
 	@echo "Installing Python dependencies..."
 	$(PIP) install -r requirements.txt
 	@echo "Downloading NLTK data..."
-	$(PYTHON) -c "import nltk; nltk.download('punkt_tab', quiet=False)"
+	SSL_CERT_FILE=$$($(PYTHON) -c "import certifi; print(certifi.where())") \
+		$(PYTHON) -c "import nltk; nltk.download('punkt_tab', quiet=False)"
 	@echo "Installing frontend dependencies..."
 	cd frontend && rm -rf node_modules && $(NODE_ENV_VARS) $(NPM) install --no-fund --no-audit
 	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
