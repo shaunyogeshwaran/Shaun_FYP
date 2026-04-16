@@ -6,7 +6,7 @@ BACKEND_PORT := 8000
 FRONTEND_PORT := 5173
 DOCS_PORT := 4000
 
-.PHONY: start stop restart status backend frontend install smoke help
+.PHONY: start stop restart status backend frontend install smoke test test-all help
 
 # ── Default ────────────────────────────────────────────────────────────────────
 help:
@@ -16,6 +16,8 @@ help:
 	@echo "  make restart    Stop then start"
 	@echo "  make status     Show what's running"
 	@echo "  make install    Install all dependencies"
+	@echo "  make test       Run fast unit tests (~4s)"
+	@echo "  make test-all   Run all tests including slow integration (~60s)"
 	@echo "  make smoke      Smoke test (precompute 20 samples)"
 	@echo ""
 
@@ -75,3 +77,10 @@ install:
 # ── Smoke test ─────────────────────────────────────────────────────────────────
 smoke:
 	$(PYTHON) evaluate.py --precompute --split dev --version v2 --limit 20
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+test:
+	$(PYTHON) -m pytest tests/ -v
+
+test-all:
+	$(PYTHON) -m pytest tests/ -v --run-slow
