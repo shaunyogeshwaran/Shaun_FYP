@@ -1,4 +1,4 @@
-VENV := venv
+VENV := $(CURDIR)/venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 NPM := $(VENV)/bin/npm
