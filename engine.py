@@ -113,6 +113,14 @@ class AFLHREngine:
             self.llm = None
             print("Warning: No GROQ_API_KEY found. Running in offline mode only.")
 
+        # Download NLTK data needed for sentence tokenisation (v2 decomposition)
+        import nltk
+        try:
+            nltk.data.find("tokenizers/punkt_tab")
+        except LookupError:
+            print("Downloading NLTK punkt_tab...")
+            nltk.download("punkt_tab", quiet=False)
+
         # Build knowledge base index
         self.knowledge_base = KNOWLEDGE_BASE
         self.faiss_index = None
@@ -397,11 +405,7 @@ class AFLHREngine:
     def decompose_claims(self, text: str) -> list:
         """Split text into individual claim sentences using NLTK."""
         import nltk
-        try:
-            sentences = nltk.sent_tokenize(text)
-        except LookupError:
-            nltk.download("punkt_tab", quiet=True)
-            sentences = nltk.sent_tokenize(text)
+        sentences = nltk.sent_tokenize(text)
         # Filter out very short fragments (< 5 chars)
         return [s.strip() for s in sentences if len(s.strip()) >= 5]
 
