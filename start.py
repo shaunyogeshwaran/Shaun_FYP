@@ -105,8 +105,11 @@ def main():
     fp = find_free_port(PREFERRED["frontend"])
     print(f"Starting frontend on port {fp}...")
 
-    # Write VITE_API_URL so frontend knows where the backend is
-    env["VITE_API_URL"] = f"http://localhost:{bp}"
+    # Pass backend port to Vite so its server-side proxy targets the right port.
+    # Do NOT set VITE_API_URL — that would bake an absolute localhost URL into
+    # the JS bundle, breaking access from other machines. Instead the frontend
+    # uses relative /api/* calls which Vite proxies server-side.
+    env["BACKEND_PORT"] = str(bp)
 
     frontend = subprocess.Popen(
         [NPM, "run", "dev", "--", "--port", str(fp), "--strictPort"],
