@@ -42,13 +42,10 @@ install:
 		$(PYTHON) -m nodeenv --node=$(NODE_VERSION) --python-virtualenv --prebuilt $(VENV)
 	@echo "Installing Python dependencies..."
 	$(PIP) install -r requirements.txt
-	@echo "Fixing npm cache permissions..."
-	@rm -rf ~/.npm/_cacache/tmp 2>/dev/null || true
-	@mkdir -p ~/.npm && chown -R $$(whoami) ~/.npm 2>/dev/null || true
 	@echo "Installing frontend dependencies..."
-	cd frontend && rm -rf node_modules && PATH=$(VENV)/bin:$$PATH $(NPM) install --no-fund --no-audit
+	cd frontend && rm -rf node_modules && PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache $(NPM) install --no-fund --no-audit
 	@echo "Installing docs dependencies..."
-	cd docs && rm -rf node_modules && PATH=$(VENV)/bin:$$PATH $(NPM) install --no-fund --no-audit
+	cd docs && rm -rf node_modules && PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache $(NPM) install --no-fund --no-audit
 	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
 	@echo ""
 	@echo "  ✓ Installation complete. Run: make start"
@@ -66,13 +63,13 @@ start: stop
 		[ $$i -eq 30 ] && echo "  ✗ Backend failed — check: tail /tmp/aflhr_backend.log"; \
 	done
 	@echo "Starting frontend on port $(FRONTEND_PORT)..."
-	@cd frontend && PATH=$(VENV)/bin:$$PATH $(NPM) run dev -- --port $(FRONTEND_PORT) --strictPort > /tmp/aflhr_frontend.log 2>&1 & echo $$! > $(PID_FRONTEND)
+	@cd frontend && PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache $(NPM) run dev -- --port $(FRONTEND_PORT) --strictPort > /tmp/aflhr_frontend.log 2>&1 & echo $$! > $(PID_FRONTEND)
 	@sleep 4
 	@grep -q "Local:" /tmp/aflhr_frontend.log \
 		&& echo "  ✓ Frontend ready" \
 		|| (echo "  ✗ Frontend failed — check: tail /tmp/aflhr_frontend.log" && cat /tmp/aflhr_frontend.log)
 	@echo "Starting docs on port $(DOCS_PORT)..."
-	@cd docs && PATH=$(VENV)/bin:$$PATH $(NPX) docusaurus start --port $(DOCS_PORT) --no-open > /tmp/aflhr_docs.log 2>&1 & echo $$! > $(PID_DOCS)
+	@cd docs && PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache $(NPX) docusaurus start --port $(DOCS_PORT) --no-open > /tmp/aflhr_docs.log 2>&1 & echo $$! > $(PID_DOCS)
 	@sleep 4
 	@curl -sf http://localhost:$(DOCS_PORT) > /dev/null 2>&1 \
 		&& echo "  ✓ Docs ready" \
