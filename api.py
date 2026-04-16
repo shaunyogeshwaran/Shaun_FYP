@@ -16,6 +16,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
+import traceback
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -134,13 +136,17 @@ def verify(req: VerifyRequest):
         raise HTTPException(status_code=503, detail=msg)
 
     # Run the standard pipeline (retrieve + generate + single-pass verify + verdict)
-    result = engine.run_pipeline(
-        query=req.query,
-        pivot=req.pivot,
-        strict_threshold=req.strict_threshold,
-        lenient_threshold=req.lenient_threshold,
-        offline_mode=req.offline_mode if GROQ_API_KEY else True,
-    )
+    try:
+        result = engine.run_pipeline(
+            query=req.query,
+            pivot=req.pivot,
+            strict_threshold=req.strict_threshold,
+            lenient_threshold=req.lenient_threshold,
+            offline_mode=req.offline_mode if GROQ_API_KEY else True,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
     # v2: also run decomposed verification for the per-claim breakdown
     nli_score = result["nli_score"]
