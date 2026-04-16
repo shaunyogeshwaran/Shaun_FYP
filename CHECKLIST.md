@@ -71,43 +71,58 @@ All four elements (FPR + FPC + FVD + FPV) must be attempted for the FYP to be ma
   - [ ] All results critically discussed
   - [ ] Suggestions for further developments based on testing outcomes
 
-### Report Submission
+### Report Pre-Submission Checks (from submission guide)
 
+- [ ] "Project Title" on title page replaced with actual title
+- [ ] Student name and supervisor name on title page
+- [ ] Declaration section completed (word count, name, date of submission)
+- [ ] ALL orange template sections deleted from final version
+- [ ] Demo video URL/link included in Appendix I
+- [ ] Code access link included in Appendix I (GitHub repo and/or OneDrive)
 - [ ] File format: DOCX or PDF only (no other types)
 - [ ] File size under 10MB
 - [ ] NOT zipped
-- [ ] Demo video link included in Appendix I
-- [ ] Submit on Blackboard by deadline
+- [ ] Submit on Blackboard together with FPC by 30/03/2026 13:00
 
 ---
 
 ## 2. Final Project Code (FPC)
 
+### Code Quality
 - [ ] Code is complete and functional
+- [ ] `make install` works from a clean checkout
 - [ ] `make start` runs without errors
-- [ ] `make install` instructions work from clean checkout
-- [ ] README.md explains all steps to run the project
-- [ ] Code zipped for submission
-- [ ] If ZIP < 50MB: upload on Blackboard with report
+- [ ] README.md explains all steps required to run the project
+- [ ] Code executes without issues and/or errors
+
+### Submission (from submission guide)
+- [ ] ZIP your entire code
+- [ ] If ZIP < 50MB: upload on Blackboard together with report
 - [ ] If ZIP > 50MB: upload to University OneDrive, share link in Appendix I
-  - [ ] OneDrive sharing: "People in University of Westminster"
+  - [ ] OneDrive sharing set to "People in University of Westminster"
   - [ ] "Block download" OFF
-  - [ ] Link pasted in Appendix I
-- [ ] GitHub repo link included in report/appendix
+  - [ ] Copy link and paste in Appendix I
+- [ ] If code is on external platform (GitHub): provide link and access
+  - [ ] Access granted to supervisor, moderator, and external examiners
+  - [ ] If password-protected, provide credentials
 - [ ] Access maintained until final grade confirmation (end of summer)
 
 ---
 
 ## 3. Final Project Video Demo (FVD)
 
-- [ ] Screen capture showing user interface
-- [ ] All functionalities demonstrated
-- [ ] How-to-use demonstration
-- [ ] Voiceover explaining/describing the product
+### Content Requirements
+- [ ] Screen capture showing the user interface
+- [ ] ALL functionalities demonstrated
+- [ ] Simple demonstration of how to use the software
+- [ ] Voiceover explaining/describing the product (required)
 - [ ] Clear video and audio quality
-- [ ] Uploaded to OneDrive/YouTube/other platform
-- [ ] Link included in Appendix I of report
-- [ ] Link accessible until end of summer (grade confirmation)
+
+### Submission (from submission guide)
+- [ ] Upload to OneDrive, YouTube, or other platform
+- [ ] Share link in Appendix I of the report
+- [ ] Verify the link is easily accessible (test in incognito/another browser)
+- [ ] Video must remain accessible until end of summer (grade confirmation)
 
 ---
 
