@@ -28,6 +28,9 @@ wheels/
 
 # Virtual environments
 venv/
+
+# npm lock files (generated per-platform by make install)
+package-lock.json
 ENV/
 env/
 .venv/

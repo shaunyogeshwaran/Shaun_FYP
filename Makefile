@@ -25,14 +25,19 @@ help:
 
 # ── Install ────────────────────────────────────────────────────────────────────
 install:
+	@echo "Checking prerequisites..."
+	@command -v python3 >/dev/null 2>&1 || (echo "Error: python3 not found. Install Python 3.10+ first." && exit 1)
+	@command -v node >/dev/null 2>&1 || (echo "Error: node not found. Install Node.js 18+ first." && exit 1)
+	@command -v npm >/dev/null 2>&1 || (echo "Error: npm not found. Install Node.js 18+ first." && exit 1)
 	@echo "Creating Python virtual environment..."
-	@python3 -m venv $(VENV)
+	python3 -m venv $(VENV)
 	@echo "Installing Python dependencies..."
+	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
 	@echo "Installing frontend dependencies..."
-	cd frontend && npm install
+	cd frontend && rm -rf node_modules && npm install --no-fund --no-audit
 	@echo "Installing docs dependencies..."
-	cd docs && npm install
+	cd docs && rm -rf node_modules && npm install --no-fund --no-audit
 	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
 	@echo ""
 	@echo "  ✓ Installation complete. Run: make start"
