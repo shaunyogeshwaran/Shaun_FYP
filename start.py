@@ -49,6 +49,23 @@ def wait_for_port(port, timeout=60):
     return False
 
 
+def wait_for_backend(port, timeout=120):
+    """Wait until the backend health endpoint responds (engine fully loaded)."""
+    import urllib.request
+    import urllib.error
+    url = f"http://127.0.0.1:{port}/api/health"
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with urllib.request.urlopen(url, timeout=3) as r:
+                if r.status == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(2)
+    return False
+
+
 def stop():
     """Kill any previously started services."""
     if os.path.exists(PID_FILE):
@@ -96,7 +113,7 @@ def main():
     pids.append(backend.pid)
 
     print("Waiting for backend (loading models, ~20s)...")
-    if wait_for_port(bp, timeout=60):
+    if wait_for_backend(bp, timeout=120):
         print(f"  ✓ Backend ready on port {bp}")
     else:
         print(f"  ✗ Backend failed — check: tail {BACKEND_LOG}")
