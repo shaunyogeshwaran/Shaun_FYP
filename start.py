@@ -81,7 +81,7 @@ def stop():
         os.remove(PID_FILE)
 
     # Also kill by name as fallback
-    for pattern in ["uvicorn api:app"]:
+    for pattern in ["uvicorn api:app", "vite --port"]:
         subprocess.run(["pkill", "-f", pattern],
                        capture_output=True)
     time.sleep(1)
