@@ -30,7 +30,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 ## Prerequisites
 
 - Python 3.10+
-- Node.js 18+ (for frontend)
+- Node.js 20+ (for frontend and docs)
 - 24 GB RAM recommended
 - GPU auto-detected (CUDA used when available; falls back to CPU on Mac/other). Colab notebook provided for faster GPU runs
 
@@ -51,7 +51,7 @@ Open **http://localhost:5173** — that's it.
 | Requirement | Details |
 |---|---|
 | **Python** | 3.10+ with pip |
-| **Node.js** | 18+ with npm |
+| **Node.js** | 20+ with npm (required by react-router and Docusaurus) |
 | **RAM** | 24 GB recommended (ML models load into memory) |
 | **Disk** | ~3 GB (models auto-download from HuggingFace on first run) |
 | **GPU** | Optional — CUDA auto-detected, falls back to CPU. Colab notebook provided for faster GPU runs |
@@ -70,6 +70,8 @@ Open **http://localhost:5173** — that's it.
 | Frontend won't start | Check logs: `tail /tmp/aflhr_frontend.log` |
 | Port 8000/5173 in use | `make stop` first, or kill the process on that port |
 | Models downloading slowly | First run downloads ~3 GB from HuggingFace. Subsequent runs use cache |
+| npm EACCES permission denied | Run `sudo chown -R $(whoami) ~/.npm` then retry `make install` |
+| npm EBADENGINE Node 18 | Upgrade to Node.js 20+: visit https://nodejs.org |
 | MPS/Apple GPU segfault | Expected — the system auto-disables MPS and uses CPU |
 
 ## Installation (step-by-step)
