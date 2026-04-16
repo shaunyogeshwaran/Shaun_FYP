@@ -27,7 +27,7 @@ VERIFIER_MODEL = "FacebookAI/roberta-large-mnli"
 GENERATOR_MODEL = "llama-3.1-8b-instant"  # Groq model ID
 
 # =============================================================================
-# Threshold Defaults (calibrate after first run)
+# Threshold Defaults (v1 baselines — v2 uses tuned values from grid search)
 # =============================================================================
 DEFAULT_PIVOT = 0.75
 DEFAULT_STRICT_THRESHOLD = 0.95

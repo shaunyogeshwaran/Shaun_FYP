@@ -41,7 +41,7 @@ git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
 cd Shaun_FYP
 make install        # installs pip + npm dependencies, creates .env
 # Edit .env and add your GROQ_API_KEY (free at https://console.groq.com)
-make start          # starts backend (:8000) + frontend (:5173)
+make start          # starts backend (:8000) + frontend (:5173) + docs (:4000)
 ```
 
 Open **http://localhost:5173** — that's it.
@@ -110,7 +110,7 @@ If you prefer manual setup over `make install`:
 ## Running the Demo
 
 ```bash
-make start     # starts backend (port 8000) + frontend (port 5173)
+make start     # starts backend (port 8000) + frontend (port 5173) + docs (port 4000)
 make stop      # stop both servers
 make restart   # bounce both servers
 make status    # check what's running
@@ -170,7 +170,7 @@ v2 adds four improvements over the baseline:
 ```bash
 python run_v2.py                   # full run (~4h on GPU, ~24h on CPU)
 python run_v2.py --limit 50        # smoke test (~minutes)
-python run_v2.py --skip-calibrate  # reuse existing calibration
+python run_v2.py --calibrate       # include calibration step (off by default)
 ```
 
 **Google Colab** (recommended for speed): Open `colab_v2_pipeline.ipynb` in Colab with a T4 GPU runtime for ~3-6 hour total runtime.

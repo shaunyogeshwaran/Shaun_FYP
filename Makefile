@@ -50,8 +50,8 @@ start: stop
 # ── Stop ───────────────────────────────────────────────────────────────────────
 stop:
 	@pkill -f "uvicorn api:app" 2>/dev/null && echo "Stopped backend" || true
-	@pkill -f "vite" 2>/dev/null && echo "Stopped frontend" || true
-	@pkill -f "docusaurus start" 2>/dev/null && echo "Stopped docs" || true
+	@kill $$(cat $(PID_FRONTEND) 2>/dev/null) 2>/dev/null && echo "Stopped frontend" || true
+	@kill $$(cat $(PID_DOCS) 2>/dev/null) 2>/dev/null && echo "Stopped docs" || true
 	@rm -f $(PID_BACKEND) $(PID_FRONTEND) $(PID_DOCS)
 	@sleep 2
 

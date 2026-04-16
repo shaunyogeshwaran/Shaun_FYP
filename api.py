@@ -1,7 +1,7 @@
 """
 AFLHR Lite - FastAPI Backend
 REST API wrapping AFLHREngine for the React frontend.
-Supports both v1 (baseline) and v2 (decomposition + windowed NLI + calibration).
+Supports both v1 (baseline) and v2 (decomposition + windowed NLI + BGE embeddings).
 
 AI Disclosure: Development of this module was assisted by AI tools
 for code structuring, debugging, and refactoring. The API design and endpoint
@@ -33,7 +33,7 @@ app = FastAPI(title="AFLHR Lite API", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

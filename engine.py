@@ -9,8 +9,8 @@ algorithm design, and research methodology are the author's own work.
 v2 improvements:
   - Sliding-window NLI (fixes 512-token truncation for long premises)
   - Sentence-level claim decomposition (addresses semantic illusion)
-  - NLI temperature scaling / calibration
   - Optional BGE embedding upgrade (ablation)
+  - NLI temperature scaling investigated (T=10 boundary — documented negative result)
 """
 
 import os

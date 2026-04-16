@@ -32,9 +32,9 @@ Main verification endpoint. Runs the full pipeline: retrieval → generation →
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `query` | string | *required* | The claim or question to verify |
-| `pivot` | float | 0.7 | Pivot threshold for tiered Cw-CONLI |
-| `strict_threshold` | float | 0.85 | Upper threshold (low retrieval confidence) |
-| `lenient_threshold` | float | 0.55 | Lower threshold (high retrieval confidence) |
+| `pivot` | float | 0.75 | Pivot threshold for tiered Cw-CONLI |
+| `strict_threshold` | float | 0.95 | Upper threshold (low retrieval confidence) |
+| `lenient_threshold` | float | 0.70 | Lower threshold (high retrieval confidence) |
 | `offline_mode` | bool | false | Skip LLM generation (use mock response) |
 | `v2_mode` | bool | false | Enable v2 features (windowed NLI, decomposition, BGE) |
 
@@ -55,17 +55,22 @@ curl -X POST http://localhost:8000/api/verify \
 {
   "query": "When was the University of Westminster founded?",
   "retrieval": {
-    "score": 0.877,
-    "top_passages": ["..."],
-    "topic": "University of Westminster"
+    "context": "The University of Westminster was founded in 1838...",
+    "retrieval_score": 0.877,
+    "raw_score": 0.754,
+    "documents": ["..."],
+    "indices": [0, 2]
   },
   "generation": "The University of Westminster was founded in 1838...",
   "nli_score": 0.883,
   "verdict": {
-    "label": "VERIFIED",
-    "threshold_mode": "LENIENT",
-    "threshold_used": 0.55,
-    "reasoning": "..."
+    "status": "VERIFIED",
+    "mode": "LENIENT",
+    "threshold": 0.70,
+    "nli_score": 0.883,
+    "retrieval_score": 0.877,
+    "reasoning": "High retrieval confidence -> trusting evidence quality",
+    "passed": true
   },
   "version": "v2",
   "nli_method": "decomposed",
@@ -84,9 +89,12 @@ Returns information about the loaded knowledge base.
 **Response:**
 ```json
 {
-  "topics": ["University of Westminster", "Machine Learning", "..."],
-  "total_passages": 6,
-  "embedding_model": "all-MiniLM-L6-v2"
+  "topics": [
+    {"name": "University of Westminster", "passages": 3},
+    {"name": "AI Hallucinations", "passages": 2},
+    {"name": "Climate of Sri Lanka (Distractor)", "passages": 1}
+  ],
+  "total_passages": 6
 }
 ```
 

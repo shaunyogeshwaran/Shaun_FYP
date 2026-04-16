@@ -445,7 +445,7 @@ def main():
     parser.add_argument("--realistic", action="store_true",
                         help="Experiment 2: shared-index retrieval (QA only)")
     parser.add_argument("--version", default="v1", choices=["v1", "v2"],
-                        help="v1=baseline, v2=decomposition+windowed+calibration")
+                        help="v1=baseline, v2=decomposition+windowed+bge")
     parser.add_argument("--nli-key", default="nli_score",
                         help="NLI score column to use (default: nli_score)")
     parser.add_argument("--tuned", action="store_true",

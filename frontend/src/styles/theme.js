@@ -100,16 +100,3 @@ export const fonts = {
   body: "'DM Sans', sans-serif",
 }
 
-export const shadows = {
-  card: '0 2px 20px rgba(0, 0, 0, 0.4)',
-  glow: (color) => `0 0 30px ${color}`,
-  inset: 'inset 0 1px 0 rgba(255,255,255,0.03)',
-}
-
-export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
-  xl: 24,
-  full: '50%',
-}
