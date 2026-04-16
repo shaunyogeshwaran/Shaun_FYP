@@ -16,7 +16,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 import threading
@@ -65,12 +65,19 @@ engine_v2: AFLHREngine | None = None
 _v2_lock = threading.Lock()
 
 
+_startup_error: str | None = None
+
+
 @app.on_event("startup")
 def startup():
-    global engine_v1
+    global engine_v1, _startup_error
     print("Loading AFLHR Engine (v1)...")
-    engine_v1 = AFLHREngine()
-    print("Engine v1 ready.")
+    try:
+        engine_v1 = AFLHREngine()
+        print("Engine v1 ready.")
+    except Exception as e:
+        _startup_error = str(e)
+        print(f"ERROR: Engine v1 failed to load: {e}")
 
 
 def get_v2_engine():
@@ -121,6 +128,10 @@ class VerifyResponse(BaseModel):
 @app.post("/api/verify", response_model=VerifyResponse)
 def verify(req: VerifyRequest):
     engine = get_v2_engine() if req.v2_mode else engine_v1
+
+    if engine is None:
+        msg = f"Engine not loaded: {_startup_error}" if _startup_error else "Engine not loaded"
+        raise HTTPException(status_code=503, detail=msg)
 
     # Run the standard pipeline (retrieve + generate + single-pass verify + verdict)
     result = engine.run_pipeline(
