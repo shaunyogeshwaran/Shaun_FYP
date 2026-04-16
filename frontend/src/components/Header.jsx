@@ -5,6 +5,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'
 
+const DOCS_URL = import.meta.env.VITE_DOCS_URL || 'http://localhost:4000'
+
 const navItems = [
   { path: '/', label: 'Verify' },
   { path: '/explore', label: 'Explore' },
@@ -106,6 +108,34 @@ export default function Header({ health }) {
               </Link>
             )
           })}
+
+          {/* External link to Docusaurus docs site */}
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: fonts.body,
+              fontSize: 13,
+              fontWeight: 400,
+              color: colors.textSecondary,
+              padding: '8px 16px',
+              borderRadius: 8,
+              background: 'transparent',
+              transition: 'all 0.2s ease',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            Docs
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
         </nav>
 
         {/* Right side: toggle + health */}
