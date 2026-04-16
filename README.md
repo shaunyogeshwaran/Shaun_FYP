@@ -29,7 +29,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Prerequisites
 
-- Python 3.10+ and make (Node.js 20 is installed automatically by `make install`)
+- Python 3.9+ and make (Node.js 20 is installed automatically by `make install`)
 - 24 GB RAM recommended
 - GPU auto-detected (CUDA used when available; falls back to CPU on Mac/other). Colab notebook provided for faster GPU runs
 
@@ -38,9 +38,9 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 ```bash
 git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
 cd Shaun_FYP
-make install        # creates venv, installs pip + npm dependencies, creates .env
+make install        # creates venv, installs pip + npm deps, downloads NLTK data, creates .env
 # Edit .env and add your GROQ_API_KEY (free at https://console.groq.com)
-make start          # starts backend (:8000) + frontend (:5173) + docs (:4000)
+make start          # starts backend (:8000) + frontend (:5173)
 ```
 
 Open **http://localhost:5173** — that's it.
@@ -49,7 +49,7 @@ Open **http://localhost:5173** — that's it.
 
 | Requirement | Details |
 |---|---|
-| **Python** | 3.10+ with pip (only prerequisite) |
+| **Python** | 3.9+ with pip (only prerequisite; tested on 3.9–3.13) |
 | **Node.js** | 20+ (installed automatically by `make install` via nodeenv) |
 | **RAM** | 24 GB recommended (ML models load into memory) |
 | **Disk** | ~3 GB (models auto-download from HuggingFace on first run) |
@@ -60,17 +60,30 @@ Open **http://localhost:5173** — that's it.
 
 `make install` creates a Python virtual environment (`venv/`), installs Node.js 20 into it via `nodeenv`, then installs all pip and npm dependencies. Everything lives inside `venv/` — no global installs, no PATH issues, no permission errors. All subsequent `make` commands use the venv's Python, Node, and npm automatically.
 
+### Status indicator
+
+The header shows one of three states:
+
+| Indicator | Meaning |
+|---|---|
+| 🟢 **Engine Ready** | Backend loaded, Groq key valid — full pipeline active |
+| 🟡 **Offline Only** | Backend loaded, no Groq key — RAG + NLI work, LLM step uses a mock response |
+| 🔴 **Connecting** | Backend not reachable |
+
+A `gsk_`-prefixed key in `.env` is required for online mode. The placeholder value (`your_groq_api_key_here`) is treated as unset.
+
 ### Troubleshooting
 
 | Problem | Fix |
 |---|---|
-| `make install` fails on pip | Ensure Python 3.10+ is on your PATH: `python3 --version` |
-| Backend won't start | Check logs: `tail /tmp/aflhr_backend.log` |
-| Frontend won't start | Check logs: `tail /tmp/aflhr_frontend.log` |
+| `make install` fails on pip | Ensure Python 3.9+ is on your PATH: `python3 --version` |
+| Backend won't start | Check logs: `tail .run/backend.log` |
+| Frontend won't start | Check logs: `tail .run/frontend.log` |
 | Port 8000/5173 in use | `make stop` first, or kill the process on that port |
 | Models downloading slowly | First run downloads ~3 GB from HuggingFace. Subsequent runs use cache |
+| v2 mode fails (NLTK error) | Run `make install` — downloads `punkt_tab` with correct SSL certs |
+| SSL certificate errors on macOS | Run `make install` — uses certifi bundle automatically |
 | npm EACCES permission denied | Run `sudo chown -R $(whoami) ~/.npm` then retry `make install` |
-| npm EBADENGINE Node 18 | Upgrade to Node.js 20+: visit https://nodejs.org |
 | MPS/Apple GPU segfault | Expected — the system auto-disables MPS and uses CPU |
 
 ## Installation (step-by-step)
@@ -103,9 +116,9 @@ If you prefer manual setup over `make install`:
 ## Running the Demo
 
 ```bash
-make start     # starts backend (port 8000) + frontend (port 5173) + docs (port 4000)
-make stop      # stop both servers
-make restart   # bounce both servers
+make start     # starts backend (port 8000) + frontend (port 5173)
+make stop      # stop all servers
+make restart   # bounce all servers
 make status    # check what's running
 ```
 
