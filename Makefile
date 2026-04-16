@@ -34,11 +34,12 @@ install:
 	@command -v python3 >/dev/null 2>&1 || (echo "Error: python3 not found. Install Python 3.10+ first." && exit 1)
 	@echo "Creating Python virtual environment..."
 	python3 -m venv $(VENV)
-	@echo "Upgrading pip..."
-	$(PIP) install --upgrade pip
+	@echo "Upgrading pip and fixing SSL certificates..."
+	$(PIP) install --upgrade pip certifi
 	@echo "Installing Node.js $(NODE_VERSION) into venv (via nodeenv)..."
 	$(PIP) install nodeenv
-	$(PYTHON) -m nodeenv --node=$(NODE_VERSION) --python-virtualenv --prebuilt $(VENV)
+	SSL_CERT_FILE=$$($(PYTHON) -c "import certifi; print(certifi.where())") \
+		$(PYTHON) -m nodeenv --node=$(NODE_VERSION) --python-virtualenv --prebuilt $(VENV)
 	@echo "Installing Python dependencies..."
 	$(PIP) install -r requirements.txt
 	@echo "Installing frontend dependencies..."
