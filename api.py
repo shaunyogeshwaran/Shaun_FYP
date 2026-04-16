@@ -155,24 +155,28 @@ def verify(req: VerifyRequest):
     per_claim = []
 
     if req.v2_mode:
-        premise = result["retrieval"]["context"]
-        hypothesis = result["generation"]
-        decomp = engine.verify_decomposed(premise=premise, hypothesis=hypothesis)
-        nli_score = decomp["score"]
-        nli_method = "decomposed"
-        n_claims = decomp["n_claims"]
-        per_claim = [
-            ClaimScore(claim=c["claim"], score=round(c["score"], 4))
-            for c in decomp["per_claim"]
-        ]
-        # Recompute verdict with decomposed score
-        result["verdict"] = engine.calculate_verdict(
-            retrieval_score=result["retrieval"]["retrieval_score"],
-            nli_score=nli_score,
-            pivot=req.pivot,
-            strict_threshold=req.strict_threshold,
-            lenient_threshold=req.lenient_threshold,
-        )
+        try:
+            premise = result["retrieval"]["context"]
+            hypothesis = result["generation"]
+            decomp = engine.verify_decomposed(premise=premise, hypothesis=hypothesis)
+            nli_score = decomp["score"]
+            nli_method = "decomposed"
+            n_claims = decomp["n_claims"]
+            per_claim = [
+                ClaimScore(claim=c["claim"], score=round(c["score"], 4))
+                for c in decomp["per_claim"]
+            ]
+            # Recompute verdict with decomposed score
+            result["verdict"] = engine.calculate_verdict(
+                retrieval_score=result["retrieval"]["retrieval_score"],
+                nli_score=nli_score,
+                pivot=req.pivot,
+                strict_threshold=req.strict_threshold,
+                lenient_threshold=req.lenient_threshold,
+            )
+        except Exception as e:
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
 
     return VerifyResponse(
         query=result["query"],
