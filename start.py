@@ -39,12 +39,16 @@ def find_free_port(start):
 
 
 def wait_for_port(port, timeout=60):
-    """Wait until a port is accepting connections."""
+    """Wait until a port is accepting connections (tries IPv4 and IPv6)."""
     start = time.time()
     while time.time() - start < timeout:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("127.0.0.1", port)) == 0:
-                return True
+        for family, addr in [(socket.AF_INET, "127.0.0.1"), (socket.AF_INET6, "::1")]:
+            try:
+                with socket.socket(family, socket.SOCK_STREAM) as s:
+                    if s.connect_ex((addr, port)) == 0:
+                        return True
+            except OSError:
+                pass
         time.sleep(2)
     return False
 
