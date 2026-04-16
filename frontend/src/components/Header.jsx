@@ -17,6 +17,26 @@ export default function Header({ health }) {
   const location = useLocation()
   const { colors, isDark, toggle } = useTheme()
 
+  const engineReady = health?.engine_v1_loaded
+  const hasKey = health?.has_api_key
+  const statusColor = !engineReady
+    ? colors.hallucination
+    : hasKey ? colors.verified : '#f59e0b'
+  const statusGlow = !engineReady
+    ? colors.hallucinationGlow
+    : hasKey ? colors.verifiedGlow : 'rgba(245, 158, 11, 0.5)'
+  const statusLabel = !engineReady
+    ? 'Connecting'
+    : hasKey ? 'Engine Ready' : 'Offline Only'
+  const statusBorder = !engineReady
+    ? 'rgba(255, 51, 102, 0.2)'
+    : hasKey ? 'rgba(0, 212, 123, 0.2)' : 'rgba(245, 158, 11, 0.2)'
+  const statusBg = !engineReady
+    ? (isDark ? 'rgba(255, 51, 102, 0.06)' : 'rgba(220, 38, 38, 0.06)')
+    : hasKey
+      ? (isDark ? 'rgba(0, 212, 123, 0.06)' : 'rgba(5, 150, 105, 0.06)')
+      : (isDark ? 'rgba(245, 158, 11, 0.06)' : 'rgba(180, 115, 0, 0.06)')
+
   return (
     <header style={{
       position: 'sticky',
@@ -187,25 +207,23 @@ export default function Header({ health }) {
             gap: 8,
             padding: '6px 14px',
             borderRadius: 20,
-            border: `1px solid ${health ? 'rgba(0, 212, 123, 0.2)' : 'rgba(255, 51, 102, 0.2)'}`,
-            background: health
-              ? (isDark ? 'rgba(0, 212, 123, 0.06)' : 'rgba(5, 150, 105, 0.06)')
-              : (isDark ? 'rgba(255, 51, 102, 0.06)' : 'rgba(220, 38, 38, 0.06)'),
+            border: `1px solid ${statusBorder}`,
+            background: statusBg,
           }}>
             <div style={{
               width: 7,
               height: 7,
               borderRadius: '50%',
-              background: health ? colors.verified : colors.hallucination,
-              boxShadow: `0 0 8px ${health ? colors.verifiedGlow : colors.hallucinationGlow}`,
-              animation: health ? 'none' : 'pulse 2s infinite',
+              background: statusColor,
+              boxShadow: `0 0 8px ${statusGlow}`,
+              animation: engineReady ? 'none' : 'pulse 2s infinite',
             }} />
             <span style={{
               fontFamily: fonts.mono,
               fontSize: 11,
-              color: health ? colors.verified : colors.hallucination,
+              color: statusColor,
             }}>
-              {health ? 'Engine Ready' : 'Connecting'}
+              {statusLabel}
             </span>
           </div>
         </div>
