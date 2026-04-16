@@ -9,7 +9,7 @@ const config = {
   future: { v4: true },
 
   url: process.env.DOCS_URL || 'http://localhost:4000',
-  baseUrl: '/',
+  baseUrl: process.env.BASE_URL || '/',
 
   onBrokenLinks: 'warn',
 

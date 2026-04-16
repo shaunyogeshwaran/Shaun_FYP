@@ -2,7 +2,6 @@ VENV := $(CURDIR)/venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 NPM := $(VENV)/bin/npm
-NPX := $(VENV)/bin/npx
 NODE_VERSION := 20.18.0
 NODE_ENV_VARS := PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache
 
@@ -12,8 +11,8 @@ NODE_ENV_VARS := PATH=$(VENV)/bin:$$PATH npm_config_cache=$(VENV)/.npm-cache
 help:
 	@echo ""
 	@echo "  make install    Install everything (Python venv + Node.js + all deps)"
-	@echo "  make start      Start backend + frontend + docs"
-	@echo "  make stop       Stop backend + frontend + docs"
+	@echo "  make start      Start backend + frontend"
+	@echo "  make stop       Stop backend + frontend"
 	@echo "  make restart    Stop then start"
 	@echo "  make status     Show what's running"
 	@echo "  make test       Run fast unit tests (~4s)"
@@ -39,8 +38,6 @@ install:
 	$(PIP) install -r requirements.txt
 	@echo "Installing frontend dependencies..."
 	cd frontend && rm -rf node_modules && $(NODE_ENV_VARS) $(NPM) install --no-fund --no-audit
-	@echo "Installing docs dependencies..."
-	cd docs && rm -rf node_modules && $(NODE_ENV_VARS) $(NPM) install --no-fund --no-audit
 	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
 	@echo ""
 	@echo "  ✓ Installation complete. Run: make start"

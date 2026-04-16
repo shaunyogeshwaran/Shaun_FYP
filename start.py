@@ -11,11 +11,11 @@ import time
 VENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv")
 PYTHON = os.path.join(VENV, "bin", "python")
 NPM = os.path.join(VENV, "bin", "npm")
-NPX = os.path.join(VENV, "bin", "npx")
 PID_FILE = "/tmp/aflhr_pids.txt"
+DOCS_URL = "https://shaunyogeshwaran.github.io/Shaun_FYP/"
 
 # Preferred ports (will auto-increment if busy)
-PREFERRED = {"backend": 8000, "frontend": 5173, "docs": 4000}
+PREFERRED = {"backend": 8000, "frontend": 5173}
 
 
 def find_free_port(start):
@@ -116,23 +116,6 @@ def main():
     else:
         print(f"  ✗ Frontend failed — check: tail /tmp/aflhr_frontend.log")
 
-    # --- Docs ---
-    dp = find_free_port(PREFERRED["docs"])
-    print(f"Starting docs on port {dp}...")
-    docs = subprocess.Popen(
-        [NPX, "docusaurus", "start", "--port", str(dp), "--no-open"],
-        cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs"),
-        stdout=open("/tmp/aflhr_docs.log", "w"),
-        stderr=subprocess.STDOUT,
-        env=env,
-    )
-    pids.append(docs.pid)
-
-    if wait_for_port(dp, timeout=15):
-        print(f"  ✓ Docs ready on port {dp}")
-    else:
-        print(f"  ✗ Docs failed — check: tail /tmp/aflhr_docs.log")
-
     # Save PIDs for stop
     with open(PID_FILE, "w") as f:
         for pid in pids:
@@ -140,8 +123,8 @@ def main():
 
     print()
     print(f"  → App:  http://localhost:{fp}")
-    print(f"  → Docs: http://localhost:{dp}")
     print(f"  → API:  http://localhost:{bp}/docs")
+    print(f"  → Docs: {DOCS_URL}")
     print()
 
 
