@@ -1,4 +1,6 @@
-PYTHON ?= $(shell command -v python3 2>/dev/null || echo python)
+VENV := venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
 PID_BACKEND := /tmp/aflhr_backend.pid
 PID_FRONTEND := /tmp/aflhr_frontend.pid
 PID_DOCS := /tmp/aflhr_docs.pid
@@ -6,21 +8,39 @@ BACKEND_PORT := 8000
 FRONTEND_PORT := 5173
 DOCS_PORT := 4000
 
-.PHONY: start stop restart status backend frontend install smoke help
+.PHONY: start stop restart status install smoke test test-all help
 
 # ── Default ────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
+	@echo "  make install    Install all dependencies (creates venv)"
 	@echo "  make start      Start backend + frontend + docs"
 	@echo "  make stop       Stop backend + frontend + docs"
 	@echo "  make restart    Stop then start"
 	@echo "  make status     Show what's running"
-	@echo "  make install    Install all dependencies"
+	@echo "  make test       Run fast unit tests (~4s)"
+	@echo "  make test-all   Run all tests including slow integration (~60s)"
 	@echo "  make smoke      Smoke test (precompute 20 samples)"
+	@echo ""
+
+# ── Install ────────────────────────────────────────────────────────────────────
+install:
+	@echo "Creating Python virtual environment..."
+	@python3 -m venv $(VENV)
+	@echo "Installing Python dependencies..."
+	$(PIP) install -r requirements.txt
+	@echo "Installing frontend dependencies..."
+	cd frontend && npm install
+	@echo "Installing docs dependencies..."
+	cd docs && npm install
+	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
+	@echo ""
+	@echo "  ✓ Installation complete. Run: make start"
 	@echo ""
 
 # ── Start ──────────────────────────────────────────────────────────────────────
 start: stop
+	@if [ ! -f $(PYTHON) ]; then echo "Error: venv not found. Run 'make install' first." && exit 1; fi
 	@echo "Starting backend on port $(BACKEND_PORT)..."
 	@$(PYTHON) -m uvicorn api:app --port $(BACKEND_PORT) --log-level warning > /tmp/aflhr_backend.log 2>&1 & echo $$! > $(PID_BACKEND)
 	@echo "Waiting for backend (loading models, ~20s)..."
@@ -65,13 +85,13 @@ status:
 	@echo "--- Backend health ---"
 	@curl -sf http://localhost:$(BACKEND_PORT)/api/health 2>/dev/null || echo "  Backend unreachable"
 
-# ── Install ────────────────────────────────────────────────────────────────────
-install:
-	$(PYTHON) -m pip install -r requirements.txt
-	cd frontend && npm install
-	cd docs && npm install
-	@cp -n .env.example .env 2>/dev/null && echo "Created .env — add your GROQ_API_KEY" || echo ".env already exists, skipping"
-
 # ── Smoke test ─────────────────────────────────────────────────────────────────
 smoke:
 	$(PYTHON) evaluate.py --precompute --split dev --version v2 --limit 20
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+test:
+	$(PYTHON) -m pytest tests/ -v
+
+test-all:
+	$(PYTHON) -m pytest tests/ -v --run-slow

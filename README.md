@@ -39,7 +39,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 ```bash
 git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
 cd Shaun_FYP
-make install        # installs pip + npm dependencies, creates .env
+make install        # creates venv, installs pip + npm dependencies, creates .env
 # Edit .env and add your GROQ_API_KEY (free at https://console.groq.com)
 make start          # starts backend (:8000) + frontend (:5173) + docs (:4000)
 ```
@@ -57,14 +57,9 @@ Open **http://localhost:5173** — that's it.
 | **GPU** | Optional — CUDA auto-detected, falls back to CPU. Colab notebook provided for faster GPU runs |
 | **Groq API key** | Optional — offline mode works without it (mock LLM responses; RAG + NLI verification still function) |
 
-### Custom Python path
+### How it works
 
-The Makefile auto-detects `python3`. To override:
-
-```bash
-PYTHON=/path/to/python3 make install
-PYTHON=/path/to/python3 make start
-```
+`make install` creates a Python virtual environment (`venv/`), installs all pip and npm dependencies into it, and copies `.env.example` to `.env`. All subsequent `make` commands use the venv Python automatically — no need to activate it manually or worry about which Python is on your PATH.
 
 ### Troubleshooting
 
@@ -87,17 +82,14 @@ If you prefer manual setup over `make install`:
    cd Shaun_FYP
    ```
 
-2. **Create a virtual environment (optional but recommended):**
+2. **Create a virtual environment and install dependencies:**
    ```bash
    python3 -m venv venv
    source venv/bin/activate  # macOS/Linux
    # or: venv\Scripts\activate  # Windows
-   ```
-
-3. **Install dependencies:**
-   ```bash
    pip install -r requirements.txt
    cd frontend && npm install && cd ..
+   cd docs && npm install && cd ..
    ```
 
 4. **Set up environment variables:**
