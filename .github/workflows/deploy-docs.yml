@@ -27,9 +27,12 @@ jobs:
 
       - name: Install and build docs
         working-directory: docs
+        env:
+          DOCS_URL: https://shaunyogeshwaran.github.io
+          BASE_URL: /Shaun_FYP/
         run: |
           npm install --no-fund --no-audit
-          DOCS_URL=https://shaunyogeshwaran.github.io BASE_URL=/Shaun_FYP/ npm run build
+          npx docusaurus build --no-minify
 
       - uses: actions/upload-pages-artifact@v3
         with:
