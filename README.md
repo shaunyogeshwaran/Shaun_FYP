@@ -29,8 +29,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 20+ (for frontend and docs)
+- Python 3.10+ and make (Node.js 20 is installed automatically by `make install`)
 - 24 GB RAM recommended
 - GPU auto-detected (CUDA used when available; falls back to CPU on Mac/other). Colab notebook provided for faster GPU runs
 
@@ -50,8 +49,8 @@ Open **http://localhost:5173** — that's it.
 
 | Requirement | Details |
 |---|---|
-| **Python** | 3.10+ with pip |
-| **Node.js** | 20+ with npm (required by react-router and Docusaurus) |
+| **Python** | 3.10+ with pip (only prerequisite) |
+| **Node.js** | 20+ (installed automatically by `make install` via nodeenv) |
 | **RAM** | 24 GB recommended (ML models load into memory) |
 | **Disk** | ~3 GB (models auto-download from HuggingFace on first run) |
 | **GPU** | Optional — CUDA auto-detected, falls back to CPU. Colab notebook provided for faster GPU runs |
@@ -59,7 +58,7 @@ Open **http://localhost:5173** — that's it.
 
 ### How it works
 
-`make install` creates a Python virtual environment (`venv/`), installs all pip and npm dependencies into it, and copies `.env.example` to `.env`. All subsequent `make` commands use the venv Python automatically — no need to activate it manually or worry about which Python is on your PATH.
+`make install` creates a Python virtual environment (`venv/`), installs Node.js 20 into it via `nodeenv`, then installs all pip and npm dependencies. Everything lives inside `venv/` — no global installs, no PATH issues, no permission errors. All subsequent `make` commands use the venv's Python, Node, and npm automatically.
 
 ### Troubleshooting
 
