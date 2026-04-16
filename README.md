@@ -6,6 +6,18 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 **v2** extends the pipeline with sliding-window NLI, sentence-level claim decomposition, and a BGE embedding upgrade — addressing token truncation and semantic illusion. (Temperature scaling was investigated but disabled: T=10.0 at optimizer boundary means NLI logits are not calibratable for this task.)
 
+## Live Demo
+
+| Resource | URL |
+|---|---|
+| **Interactive demo** | https://shaun-fyp-1yzu.vercel.app |
+| **Backend API** | https://mrrobotttttt-shaun-fyp.hf.space |
+| **API health** | https://mrrobotttttt-shaun-fyp.hf.space/api/health |
+| **Swagger docs** | https://mrrobotttttt-shaun-fyp.hf.space/docs |
+| **Documentation** | https://shaunyogeshwaran.github.io/Shaun_FYP/docs/overview |
+
+The React frontend is hosted on Vercel; the FastAPI backend runs on a HuggingFace Space (Docker, `cpu-basic`). Both v1 (MiniLM baseline) and v2 (BGE + windowed NLI + decomposition) are loaded. First request after inactivity may take ~30s while the Space wakes and RoBERTa-large-MNLI reloads into memory.
+
 ## Results
 
 | Metric | v2 (standard) | v2 (realistic) |
@@ -35,6 +47,8 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 ## Quick Start (any machine)
 
+> **Just want to try it?** The [live demo](https://shaun-fyp-1yzu.vercel.app) runs the full pipeline in your browser — no setup required. The steps below are for local development or reproducing the experiments.
+
 ```bash
 git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
 cd Shaun_FYP
@@ -44,8 +58,6 @@ make start          # starts backend (:8000) + frontend (:5173)
 ```
 
 Open **http://localhost:5173** — that's it.
-
-**Docs:** https://shaunyogeshwaran.github.io/Shaun_FYP/docs/overview
 
 ### Requirements
 
