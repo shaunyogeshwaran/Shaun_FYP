@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 AFLHR Lite - FastAPI Backend
 REST API wrapping AFLHREngine for the React frontend.

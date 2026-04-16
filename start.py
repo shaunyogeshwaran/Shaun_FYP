@@ -8,10 +8,16 @@ import subprocess
 import sys
 import time
 
-VENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv")
+ROOT = os.path.dirname(os.path.abspath(__file__))
+VENV = os.path.join(ROOT, "venv")
 PYTHON = os.path.join(VENV, "bin", "python")
 NPM = os.path.join(VENV, "bin", "npm")
-PID_FILE = "/tmp/aflhr_pids.txt"
+# Store runtime files inside the project so any user who clones can run
+RUN_DIR = os.path.join(ROOT, ".run")
+os.makedirs(RUN_DIR, exist_ok=True)
+PID_FILE = os.path.join(RUN_DIR, "pids.txt")
+BACKEND_LOG = os.path.join(RUN_DIR, "backend.log")
+FRONTEND_LOG = os.path.join(RUN_DIR, "frontend.log")
 DOCS_URL = "https://shaunyogeshwaran.github.io/Shaun_FYP/"
 
 # Preferred ports (will auto-increment if busy)
@@ -83,7 +89,7 @@ def main():
     backend = subprocess.Popen(
         [PYTHON, "-m", "uvicorn", "api:app", "--port", str(bp),
          "--log-level", "warning"],
-        stdout=open("/tmp/aflhr_backend.log", "w"),
+        stdout=open(BACKEND_LOG, "w"),
         stderr=subprocess.STDOUT,
         env=env,
     )
@@ -93,7 +99,7 @@ def main():
     if wait_for_port(bp, timeout=60):
         print(f"  ✓ Backend ready on port {bp}")
     else:
-        print(f"  ✗ Backend failed — check: tail /tmp/aflhr_backend.log")
+        print(f"  ✗ Backend failed — check: tail {BACKEND_LOG}")
 
     # --- Frontend ---
     fp = find_free_port(PREFERRED["frontend"])
@@ -105,7 +111,7 @@ def main():
     frontend = subprocess.Popen(
         [NPM, "run", "dev", "--", "--port", str(fp), "--strictPort"],
         cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend"),
-        stdout=open("/tmp/aflhr_frontend.log", "w"),
+        stdout=open(FRONTEND_LOG, "w"),
         stderr=subprocess.STDOUT,
         env=env,
     )
@@ -114,7 +120,7 @@ def main():
     if wait_for_port(fp, timeout=15):
         print(f"  ✓ Frontend ready on port {fp}")
     else:
-        print(f"  ✗ Frontend failed — check: tail /tmp/aflhr_frontend.log")
+        print(f"  ✗ Frontend failed — check: tail {FRONTEND_LOG}")
 
     # Save PIDs for stop
     with open(PID_FILE, "w") as f:
