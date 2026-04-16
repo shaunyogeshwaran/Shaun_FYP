@@ -5,7 +5,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../ThemeContext'
 import { fonts } from '../styles/theme'
 
-const DOCS_URL = import.meta.env.VITE_DOCS_URL || 'https://shaunyogeshwaran.github.io/Shaun_FYP/'
+const DOCS_URL = import.meta.env.VITE_DOCS_URL || 'https://shaunyogeshwaran.github.io/Shaun_FYP/docs/overview'
 
 const navItems = [
   { path: '/', label: 'Verify' },
