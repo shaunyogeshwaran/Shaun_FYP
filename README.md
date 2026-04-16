@@ -45,6 +45,8 @@ make start          # starts backend (:8000) + frontend (:5173)
 
 Open **http://localhost:5173** — that's it.
 
+**Docs:** https://shaunyogeshwaran.github.io/Shaun_FYP/docs/overview
+
 ### Requirements
 
 | Requirement | Details |
