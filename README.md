@@ -330,6 +330,7 @@ Shaun_FYP/
 ├── config.py                   # Configuration, model IDs, thresholds, grid search ranges
 ├── dataset.py                  # HaluEval dataset loader with dev/test splitting
 ├── evaluate.py                 # Evaluation harness (precompute scores, apply conditions)
+├── tune.py                     # Grid search hyperparameter tuning (version-aware)
 ├── analyze.py                  # Results analysis, plots, McNemar's test
 ├── calibrate.py                # NLI temperature scaling calibration
 ├── run_v2.py                   # Automated v2 experiment pipeline
