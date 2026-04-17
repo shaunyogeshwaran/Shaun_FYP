@@ -31,8 +31,14 @@ Three paths to verify the work, ordered by speed:
 Reproducibility check:
 
 ```bash
-git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
-cd Shaun_FYP
+# If you received this as a submission zip:
+unzip Shaun_FYP-main.zip
+cd Shaun_FYP-main
+
+# Or clone from GitHub:
+# git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
+# cd Shaun_FYP
+
 make install
 make test
 make start
@@ -93,8 +99,14 @@ The test suite runs in offline mode and does not require a `GROQ_API_KEY`. All e
 ## Quick Start
 
 ```bash
-git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
-cd Shaun_FYP
+# If you received this as a zip, extract it first:
+unzip Shaun_FYP-main.zip
+cd Shaun_FYP-main
+
+# Or clone from GitHub:
+# git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
+# cd Shaun_FYP
+
 make install        # creates venv, installs pip and npm deps, downloads NLTK data, creates .env
 # Edit .env and add GROQ_API_KEY (optional)
 make start          # starts backend (:8000) and frontend (:5173)
@@ -140,10 +152,15 @@ A `gsk_`-prefixed key in `.env` is required for online mode. The placeholder val
 
 Alternative to `make install`:
 
-1. Clone the repository:
+1. Obtain the source:
    ```bash
-   git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
-   cd Shaun_FYP
+   # From the submission zip:
+   unzip Shaun_FYP-main.zip
+   cd Shaun_FYP-main
+
+   # Or from GitHub:
+   # git clone https://github.com/shaunyogeshwaran/Shaun_FYP.git
+   # cd Shaun_FYP
    ```
 
 2. Create a virtual environment and install Python dependencies:
