@@ -70,23 +70,10 @@ frontend/dist/
 # Experiment data (cached datasets)
 data/
 
-# Thesis artifacts (kept on thesis/finalization branch)
-thesis*.docx
-*_thesis.py
-*thesis*.py
-fix_thesis.py
-generate_figures.py
-patch_thesis*.py
-merge_thesis.py
-update_thesis.py
-format_thesis.py
-create_presentation.py
-VIVA_PREP.md
-DEMO_SCRIPT.md
-SUPERVISOR_BRIEFING.md
-VIDEO_DEMO_SCRIPT.md
-AUDIT_REPORT.md
-AFLHR_Lite_Viva.pptx
-thesis_revisions.md
-thesis_v2_results.md
+# Large binary artifacts (not part of the runnable system)
+*.docx
+*.pptx
+*.pdf
+
+# Local-only reference material
 References/
