@@ -10,7 +10,7 @@ A two-layer verification pipeline that combines Retrieval-Augmented Generation (
 
 | Resource | URL |
 |---|---|
-| Interactive demo | https://shaun-fyp-1yzu.vercel.app |
+| Interactive demo | https://shaun-fyp-xi.vercel.app |
 | Backend API | https://mrrobotttttt-shaun-fyp.hf.space |
 | API health | https://mrrobotttttt-shaun-fyp.hf.space/api/health |
 | Swagger docs | https://mrrobotttttt-shaun-fyp.hf.space/docs |
@@ -24,7 +24,7 @@ Three paths to verify the work, ordered by speed:
 
 | Path | Time | What it demonstrates |
 |---|---|---|
-| 1. Open the [live demo](https://shaun-fyp-1yzu.vercel.app) | 30 seconds | End-to-end pipeline running in production |
+| 1. Open the [live demo](https://shaun-fyp-xi.vercel.app) | 30 seconds | End-to-end pipeline running in production |
 | 2. Run the test suite locally | ~5 minutes | Unit, integration, and API tests pass |
 | 3. Full local install and run | 10–15 minutes | Every code path exercised on your machine |
 
@@ -526,7 +526,7 @@ If the troubleshooting section does not resolve the issue:
    python --version
    node --version
    ```
-3. Compare against the live demo. If [shaun-fyp-1yzu.vercel.app](https://shaun-fyp-1yzu.vercel.app) works but the local install does not, the issue is environment-specific.
+3. Compare against the live demo. If [shaun-fyp-xi.vercel.app](https://shaun-fyp-xi.vercel.app) works but the local install does not, the issue is environment-specific.
 4. Open a GitHub issue at https://github.com/shaunyogeshwaran/Shaun_FYP/issues with:
    - OS and Python version (`python3 --version`)
    - Full command and error message

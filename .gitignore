@@ -77,3 +77,4 @@ data/
 
 # Local-only reference material
 References/
+.vercel
